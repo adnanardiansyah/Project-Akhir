@@ -13,7 +13,7 @@ class OrderStatusChip extends StatelessWidget {
   Color _colorFor(ColorScheme scheme) => switch (status) {
     OrderStatus.pending => const Color(0xFFB45309),
     OrderStatus.confirmed => const Color(0xFF2F7FE0),
-    OrderStatus.paid => const Color(0xFF1F9D55),
+    OrderStatus.paid => successGreen,
     OrderStatus.cancelled => scheme.error,
   };
 

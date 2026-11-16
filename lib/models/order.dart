@@ -27,6 +27,16 @@ extension OrderStatusTransition on OrderStatus {
   };
 }
 
+// Memastikan perpindahan sah; StateError berisi pesan yang siap ditampilkan bila tidak
+void checkTransition(OrderStatus? current, OrderStatus next) {
+  if (current == null) {
+    throw StateError('Pesanan tidak ditemukan');
+  }
+  if (!current.canTransitionTo(next)) {
+    throw StateError('Status pesanan sudah berubah. Coba lagi.');
+  }
+}
+
 // Salinan satu menu di pesanan; nama dan harga dibekukan saat dipesan
 class OrderItem {
   final String menuItemId;

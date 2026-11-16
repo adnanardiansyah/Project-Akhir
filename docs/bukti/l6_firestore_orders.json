@@ -1,0 +1,156 @@
+{
+  "documents": [
+    {
+      "name": "projects/food-order-app-pnl/databases/(default)/documents/orders/DkT9pTAcghcaZFIzS7QC",
+      "fields": {
+        "customerUid": {
+          "stringValue": "sf1MLMCrIngV6dbCbWf5ioTUdbu2"
+        },
+        "paymentMethod": {
+          "nullValue": null
+        },
+        "paidAt": {
+          "nullValue": null
+        },
+        "customerName": {
+          "stringValue": "rian"
+        },
+        "restaurantId": {
+          "stringValue": "resto2"
+        },
+        "total": {
+          "integerValue": "27000"
+        },
+        "status": {
+          "stringValue": "cancelled"
+        },
+        "restaurantName": {
+          "stringValue": "Ayam Penyet Contoh"
+        },
+        "createdAt": {
+          "timestampValue": "2026-11-16T21:09:43.922Z"
+        },
+        "items": {
+          "arrayValue": {
+            "values": [
+              {
+                "mapValue": {
+                  "fields": {
+                    "price": {
+                      "integerValue": "20000"
+                    },
+                    "qty": {
+                      "integerValue": "1"
+                    },
+                    "name": {
+                      "stringValue": "Ayam Penyet"
+                    },
+                    "menuItemId": {
+                      "stringValue": "ayam-penyet"
+                    }
+                  }
+                }
+              },
+              {
+                "mapValue": {
+                  "fields": {
+                    "price": {
+                      "integerValue": "7000"
+                    },
+                    "qty": {
+                      "integerValue": "1"
+                    },
+                    "name": {
+                      "stringValue": "Es Jeruk"
+                    },
+                    "menuItemId": {
+                      "stringValue": "es-jeruk"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "createTime": "2026-11-16T21:09:43.955198Z",
+      "updateTime": "2026-11-16T21:10:21.328274Z"
+    },
+    {
+      "name": "projects/food-order-app-pnl/databases/(default)/documents/orders/yq8Q4lwlFsB14leiYjJ9",
+      "fields": {
+        "paidAt": {
+          "timestampValue": "2026-11-16T21:08:53.047Z"
+        },
+        "restaurantName": {
+          "stringValue": "Mie Aceh Contoh"
+        },
+        "status": {
+          "stringValue": "paid"
+        },
+        "paymentMethod": {
+          "stringValue": "ewallet"
+        },
+        "restaurantId": {
+          "stringValue": "resto1"
+        },
+        "customerName": {
+          "stringValue": "rian"
+        },
+        "items": {
+          "arrayValue": {
+            "values": [
+              {
+                "mapValue": {
+                  "fields": {
+                    "price": {
+                      "integerValue": "15000"
+                    },
+                    "qty": {
+                      "integerValue": "2"
+                    },
+                    "name": {
+                      "stringValue": "Mie Aceh Goreng"
+                    },
+                    "menuItemId": {
+                      "stringValue": "mie-aceh-goreng"
+                    }
+                  }
+                }
+              },
+              {
+                "mapValue": {
+                  "fields": {
+                    "price": {
+                      "integerValue": "9000"
+                    },
+                    "qty": {
+                      "integerValue": "1"
+                    },
+                    "name": {
+                      "stringValue": "Teh Tarik"
+                    },
+                    "menuItemId": {
+                      "stringValue": "teh-tarik"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "customerUid": {
+          "stringValue": "sf1MLMCrIngV6dbCbWf5ioTUdbu2"
+        },
+        "createdAt": {
+          "timestampValue": "2026-11-16T19:34:29.571Z"
+        },
+        "total": {
+          "integerValue": "39000"
+        }
+      },
+      "createTime": "2026-11-16T19:34:29.607884Z",
+      "updateTime": "2026-11-16T21:08:53.067349Z"
+    }
+  ]
+}

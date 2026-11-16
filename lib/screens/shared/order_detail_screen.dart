@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
 import '../../models/order.dart';
+import '../../models/payment_method.dart';
 import '../../services/app_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format_date_time.dart';
@@ -13,6 +14,7 @@ import '../../widgets/order_progress.dart';
 import '../../widgets/order_status_chip.dart';
 import '../../widgets/restaurant_avatar.dart';
 import '../../widgets/state_message.dart';
+import '../customer/payment_screen.dart';
 import 'chat_screen.dart';
 
 // Detail satu pesanan yang diperbarui realtime; dipakai pemesan dan resto
@@ -43,6 +45,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   // Nama lawan transaksi: resto bagi pemesan, pemesan bagi resto
   String _counterpartName(FoodOrder order) =>
       _isCustomer ? order.restaurantName : order.customerName;
+
+  // Membuka layar pembayaran simulasi untuk pesanan ini
+  void _openPayment(FoodOrder order) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PaymentScreen(order: order, services: widget.services),
+      ),
+    );
+  }
 
   // Membuka chat pesanan ini
   void _openChat(FoodOrder order) {
@@ -98,6 +109,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
+              minimumSize: dialogButtonMinSize,
               backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Theme.of(context).colorScheme.onError,
             ),
@@ -175,6 +187,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             isCustomer: _isCustomer,
             updatingTo: _updatingTo,
             onChange: (next) => _changeStatus(order, next),
+            onPay: () => _openPayment(order),
           ),
         ),
         FadeSlideIn(
@@ -249,6 +262,8 @@ class _OrderItemsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
+    final paymentMethod = paymentMethodFromName(order.paymentMethod);
+    final paidAt = order.paidAt;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -288,6 +303,26 @@ class _OrderItemsCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (paymentMethod != null) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(paymentMethod.icon, size: 18, color: scheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      paidAt == null
+                          ? 'Dibayar lewat ${paymentMethod.label}'
+                          : 'Dibayar lewat ${paymentMethod.label} · '
+                                '${formatDateTime(paidAt)}',
+                      style: text.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -295,18 +330,20 @@ class _OrderItemsCard extends StatelessWidget {
   }
 }
 
-// Tombol aksi sesuai peran dan status: resto konfirmasi/batal, pemesan batal sebelum dibayar
+// Tombol aksi sesuai peran dan status: resto konfirmasi/batal, pemesan bayar/batal sebelum dibayar
 class _OrderActions extends StatelessWidget {
   final OrderStatus status;
   final bool isCustomer;
   final OrderStatus? updatingTo;
   final ValueChanged<OrderStatus> onChange;
+  final VoidCallback onPay;
 
   const _OrderActions({
     required this.status,
     required this.isCustomer,
     required this.updatingTo,
     required this.onChange,
+    required this.onPay,
   });
 
   @override
@@ -314,6 +351,7 @@ class _OrderActions extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final canConfirm =
         !isCustomer && status.canTransitionTo(OrderStatus.confirmed);
+    final canPay = isCustomer && status.canTransitionTo(OrderStatus.paid);
     final canCancel = status.canTransitionTo(OrderStatus.cancelled);
     final busy = updatingTo != null;
     return AnimatedSize(
@@ -322,6 +360,14 @@ class _OrderActions extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (canPay) ...[
+            FilledButton.icon(
+              onPressed: busy ? null : onPay,
+              icon: const Icon(Icons.payments_rounded),
+              label: const Text('Bayar Sekarang'),
+            ),
+            const SizedBox(height: 12),
+          ],
           if (canConfirm) ...[
             LoadingButton(
               label: 'Konfirmasi Pesanan',

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/cart_item.dart';
 import '../models/order.dart';
+import '../models/payment_method.dart';
 import '../models/restaurant.dart';
 import 'firestore_write.dart';
 
@@ -49,18 +50,32 @@ class OrderService {
     if (next == OrderStatus.paid) {
       throw ArgumentError('Pembayaran memakai jalur bayar tersendiri');
     }
+    return _transition(orderId, next, {'status': next.name});
+  }
+
+  // Bayar simulasi lewat transaksi: hanya dari confirmed, status dan data bayar ditulis sekaligus
+  Future<void> payOrder(String orderId, PaymentMethod method) {
+    return _transition(orderId, OrderStatus.paid, {
+      'status': OrderStatus.paid.name,
+      'paymentMethod': method.name,
+      'paidAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Transaksi bersama: baca status terkini, cek perpindahan, lalu tulis perubahan sekaligus
+  Future<void> _transition(
+    String orderId,
+    OrderStatus next,
+    Map<String, Object> changes,
+  ) {
     final ref = _orders.doc(orderId);
     return _firestore.runTransaction((transaction) async {
       final snapshot = await transaction.get(ref);
-      final current = OrderStatus.values
-          .asNameMap()[snapshot.data()?['status']];
-      if (current == null) {
-        throw StateError('Pesanan tidak ditemukan');
-      }
-      if (!current.canTransitionTo(next)) {
-        throw StateError('Status pesanan sudah berubah. Coba lagi.');
-      }
-      transaction.update(ref, {'status': next.name});
+      checkTransition(
+        OrderStatus.values.asNameMap()[snapshot.data()?['status']],
+        next,
+      );
+      transaction.update(ref, changes);
     });
   }
 

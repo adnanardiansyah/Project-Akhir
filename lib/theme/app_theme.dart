@@ -4,12 +4,18 @@ import 'package:flutter/services.dart';
 // Warna merek: oranye hangat yang identik dengan makanan
 const Color brandOrange = Color(0xFFF26B1D);
 
+// Hijau penanda berhasil dan lunas
+const Color successGreen = Color(0xFF1F9D55);
+
 // Oranye sedikit lebih pekat untuk tombol dan teks aksen di mode terang
 const Color brandOrangeDeep = Color(0xFFE4570F);
 
 // Jari-jari sudut standar untuk kartu dan kolom isian
 const double cardRadius = 20;
 const double fieldRadius = 16;
+
+// Ukuran tombol di dialog; tombol utama tema selebar layar sehingga perlu ditimpa di dialog
+const Size dialogButtonMinSize = Size(96, 44);
 
 // Durasi dan kurva animasi yang dipakai seragam di seluruh aplikasi
 const Duration motionShort = Duration(milliseconds: 220);

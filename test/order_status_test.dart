@@ -70,4 +70,46 @@ void main() {
       );
     });
   });
+
+  group('checkTransition', () {
+    test('bayar dari pending ditolak dengan pesan status berubah', () {
+      expect(
+        () => checkTransition(OrderStatus.pending, OrderStatus.paid),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            'Status pesanan sudah berubah. Coba lagi.',
+          ),
+        ),
+      );
+    });
+
+    test('bayar dari confirmed diterima', () {
+      expect(
+        () => checkTransition(OrderStatus.confirmed, OrderStatus.paid),
+        returnsNormally,
+      );
+    });
+
+    test('batal setelah dibayar ditolak', () {
+      expect(
+        () => checkTransition(OrderStatus.paid, OrderStatus.cancelled),
+        throwsStateError,
+      );
+    });
+
+    test('pesanan tidak ditemukan ditolak dengan pesan khusus', () {
+      expect(
+        () => checkTransition(null, OrderStatus.confirmed),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            'Pesanan tidak ditemukan',
+          ),
+        ),
+      );
+    });
+  });
 }

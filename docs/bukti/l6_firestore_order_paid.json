@@ -1,0 +1,76 @@
+{
+  "name": "projects/food-order-app-pnl/databases/(default)/documents/orders/yq8Q4lwlFsB14leiYjJ9",
+  "fields": {
+    "restaurantId": {
+      "stringValue": "resto1"
+    },
+    "status": {
+      "stringValue": "paid"
+    },
+    "items": {
+      "arrayValue": {
+        "values": [
+          {
+            "mapValue": {
+              "fields": {
+                "price": {
+                  "integerValue": "15000"
+                },
+                "qty": {
+                  "integerValue": "2"
+                },
+                "name": {
+                  "stringValue": "Mie Aceh Goreng"
+                },
+                "menuItemId": {
+                  "stringValue": "mie-aceh-goreng"
+                }
+              }
+            }
+          },
+          {
+            "mapValue": {
+              "fields": {
+                "price": {
+                  "integerValue": "9000"
+                },
+                "qty": {
+                  "integerValue": "1"
+                },
+                "name": {
+                  "stringValue": "Teh Tarik"
+                },
+                "menuItemId": {
+                  "stringValue": "teh-tarik"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "createdAt": {
+      "timestampValue": "2026-11-16T19:34:29.571Z"
+    },
+    "restaurantName": {
+      "stringValue": "Mie Aceh Contoh"
+    },
+    "customerUid": {
+      "stringValue": "sf1MLMCrIngV6dbCbWf5ioTUdbu2"
+    },
+    "total": {
+      "integerValue": "39000"
+    },
+    "paidAt": {
+      "timestampValue": "2026-11-16T21:08:53.047Z"
+    },
+    "paymentMethod": {
+      "stringValue": "ewallet"
+    },
+    "customerName": {
+      "stringValue": "rian"
+    }
+  },
+  "createTime": "2026-11-16T19:34:29.607884Z",
+  "updateTime": "2026-11-16T21:08:53.067349Z"
+}

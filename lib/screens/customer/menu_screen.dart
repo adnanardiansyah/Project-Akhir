@@ -5,6 +5,7 @@ import '../../models/app_user.dart';
 import '../../models/menu_item.dart';
 import '../../models/restaurant.dart';
 import '../../services/app_services.dart';
+import '../../theme/app_theme.dart';
 import '../../utils/format_rupiah.dart';
 import '../../widgets/cart_bar.dart';
 import '../../widgets/logout_button.dart';
@@ -48,6 +49,7 @@ class MenuScreen extends StatelessWidget {
             child: const Text('Batal'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(minimumSize: dialogButtonMinSize),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Ganti'),
           ),

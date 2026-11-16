@@ -43,6 +43,27 @@ class OrderService {
     return doc.id;
   }
 
+  // Konfirmasi atau batal lewat transaksi; status dibaca ulang agar perubahan yang tidak sah ditolak
+  Future<void> updateStatus(String orderId, OrderStatus next) {
+    // Status dibayar wajib disertai data pembayaran, jadi tidak lewat jalur ini
+    if (next == OrderStatus.paid) {
+      throw ArgumentError('Pembayaran memakai jalur bayar tersendiri');
+    }
+    final ref = _orders.doc(orderId);
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(ref);
+      final current = OrderStatus.values
+          .asNameMap()[snapshot.data()?['status']];
+      if (current == null) {
+        throw StateError('Pesanan tidak ditemukan');
+      }
+      if (!current.canTransitionTo(next)) {
+        throw StateError('Status pesanan sudah berubah. Coba lagi.');
+      }
+      transaction.update(ref, {'status': next.name});
+    });
+  }
+
   // Aliran satu pesanan; null bila dokumen tidak ada atau tidak valid
   Stream<FoodOrder?> watchOrder(String orderId) {
     return _orders.doc(orderId).snapshots().map((doc) {

@@ -6,7 +6,8 @@ import '../theme/app_theme.dart';
 class LoadingButton extends StatelessWidget {
   final String label;
   final bool isLoading;
-  final VoidCallback onPressed;
+  // Null membuat tombol nonaktif, misalnya saat proses lain sedang berjalan
+  final VoidCallback? onPressed;
 
   const LoadingButton({
     super.key,

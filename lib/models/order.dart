@@ -16,6 +16,17 @@ extension OrderStatusLabel on OrderStatus {
   };
 }
 
+// Aturan perpindahan status: pending -> confirmed/cancelled, confirmed -> paid/cancelled
+extension OrderStatusTransition on OrderStatus {
+  bool canTransitionTo(OrderStatus next) => switch ((this, next)) {
+    (OrderStatus.pending, OrderStatus.confirmed) => true,
+    (OrderStatus.pending, OrderStatus.cancelled) => true,
+    (OrderStatus.confirmed, OrderStatus.paid) => true,
+    (OrderStatus.confirmed, OrderStatus.cancelled) => true,
+    _ => false,
+  };
+}
+
 // Salinan satu menu di pesanan; nama dan harga dibekukan saat dipesan
 class OrderItem {
   final String menuItemId;

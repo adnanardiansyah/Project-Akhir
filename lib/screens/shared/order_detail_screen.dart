@@ -6,7 +6,10 @@ import '../../services/app_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format_date_time.dart';
 import '../../utils/format_rupiah.dart';
+import '../../widgets/error_snack_bar.dart';
 import '../../widgets/fade_slide_in.dart';
+import '../../widgets/loading_button.dart';
+import '../../widgets/order_progress.dart';
 import '../../widgets/order_status_chip.dart';
 import '../../widgets/restaurant_avatar.dart';
 import '../../widgets/state_message.dart';
@@ -29,10 +32,11 @@ class OrderDetailScreen extends StatefulWidget {
   State<OrderDetailScreen> createState() => _OrderDetailScreenState();
 }
 
-// Menyimpan aliran pesanan agar tidak dibuat ulang tiap build
+// Menyimpan aliran pesanan dan status tujuan yang sedang diproses
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   late final Stream<FoodOrder?> _orderStream = widget.services.orders
       .watchOrder(widget.orderId);
+  OrderStatus? _updatingTo;
 
   bool get _isCustomer => widget.user.role == UserRole.customer;
 
@@ -52,6 +56,58 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ),
       ),
     );
+  }
+
+  // Mengubah status pesanan; pembatalan meminta konfirmasi lebih dulu
+  Future<void> _changeStatus(FoodOrder order, OrderStatus next) async {
+    if (_updatingTo != null) return;
+    if (next == OrderStatus.cancelled && !await _confirmCancel()) return;
+    if (!mounted) return;
+    setState(() => _updatingTo = next);
+    try {
+      await widget.services.orders.updateStatus(order.id, next);
+    } on StateError catch (e) {
+      if (mounted) showErrorSnackBar(context, e.message);
+    } catch (_) {
+      if (mounted) {
+        showErrorSnackBar(
+          context,
+          'Status gagal diubah. Periksa koneksi internet.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _updatingTo = null);
+    }
+  }
+
+  // Dialog konfirmasi pembatalan; mengembalikan true bila pengguna setuju
+  Future<bool> _confirmCancel() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Batalkan pesanan?'),
+        content: Text(
+          _isCustomer
+              ? 'Pesanan akan dibatalkan dan resto tidak akan memprosesnya.'
+              : 'Pemesan akan melihat bahwa pesanan ini dibatalkan resto.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Tidak'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Batalkan'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
   }
 
   @override
@@ -100,10 +156,29 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           child: _OrderHeader(order: order, title: _counterpartName(order)),
         ),
         const SizedBox(height: 16),
-        FadeSlideIn(index: 1, child: _OrderItemsCard(order: order)),
+        FadeSlideIn(
+          index: 1,
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+              child: OrderProgress(status: order.status),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        FadeSlideIn(index: 2, child: _OrderItemsCard(order: order)),
         const SizedBox(height: 16),
         FadeSlideIn(
-          index: 2,
+          index: 3,
+          child: _OrderActions(
+            status: order.status,
+            isCustomer: _isCustomer,
+            updatingTo: _updatingTo,
+            onChange: (next) => _changeStatus(order, next),
+          ),
+        ),
+        FadeSlideIn(
+          index: 4,
           child: FilledButton.tonalIcon(
             onPressed: () => _openChat(order),
             icon: const Icon(Icons.chat_bubble_outline_rounded),
@@ -215,6 +290,67 @@ class _OrderItemsCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Tombol aksi sesuai peran dan status: resto konfirmasi/batal, pemesan batal sebelum dibayar
+class _OrderActions extends StatelessWidget {
+  final OrderStatus status;
+  final bool isCustomer;
+  final OrderStatus? updatingTo;
+  final ValueChanged<OrderStatus> onChange;
+
+  const _OrderActions({
+    required this.status,
+    required this.isCustomer,
+    required this.updatingTo,
+    required this.onChange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final canConfirm =
+        !isCustomer && status.canTransitionTo(OrderStatus.confirmed);
+    final canCancel = status.canTransitionTo(OrderStatus.cancelled);
+    final busy = updatingTo != null;
+    return AnimatedSize(
+      duration: motionMedium,
+      curve: motionCurve,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (canConfirm) ...[
+            LoadingButton(
+              label: 'Konfirmasi Pesanan',
+              isLoading: updatingTo == OrderStatus.confirmed,
+              onPressed: busy ? null : () => onChange(OrderStatus.confirmed),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (canCancel) ...[
+            OutlinedButton(
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+                foregroundColor: scheme.error,
+                side: BorderSide(color: scheme.error.withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(fieldRadius),
+                ),
+              ),
+              onPressed: busy ? null : () => onChange(OrderStatus.cancelled),
+              child: updatingTo == OrderStatus.cancelled
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.2),
+                    )
+                  : Text(isCustomer ? 'Batalkan Pesanan' : 'Tolak / Batalkan'),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ],
       ),
     );
   }

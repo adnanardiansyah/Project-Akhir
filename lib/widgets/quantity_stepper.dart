@@ -17,7 +17,6 @@ class QuantityStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return AnimatedSwitcher(
       duration: motionShort,
       transitionBuilder: (child, animation) =>
@@ -25,12 +24,9 @@ class QuantityStepper extends StatelessWidget {
       child: quantity == 0
           ? FilledButton.tonalIcon(
               key: const ValueKey('add'),
-              // Gaya senada dengan pengatur jumlah: latar oranye tipis, teks oranye
               style: FilledButton.styleFrom(
                 minimumSize: const Size(0, 40),
                 padding: const EdgeInsets.symmetric(horizontal: 14),
-                backgroundColor: scheme.primary.withValues(alpha: 0.12),
-                foregroundColor: scheme.primary,
               ),
               onPressed: onIncrement,
               icon: const Icon(Icons.add_rounded, size: 20),

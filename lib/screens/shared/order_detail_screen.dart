@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../models/app_user.dart';
 import '../../models/order.dart';
 import '../../services/app_services.dart';
 import '../../theme/app_theme.dart';
@@ -9,15 +10,18 @@ import '../../widgets/fade_slide_in.dart';
 import '../../widgets/order_status_chip.dart';
 import '../../widgets/restaurant_avatar.dart';
 import '../../widgets/state_message.dart';
+import 'chat_screen.dart';
 
-// Detail satu pesanan yang diperbarui realtime
+// Detail satu pesanan yang diperbarui realtime; dipakai pemesan dan resto
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
+  final AppUser user;
   final AppServices services;
 
   const OrderDetailScreen({
     super.key,
     required this.orderId,
+    required this.user,
     required this.services,
   });
 
@@ -29,6 +33,26 @@ class OrderDetailScreen extends StatefulWidget {
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
   late final Stream<FoodOrder?> _orderStream = widget.services.orders
       .watchOrder(widget.orderId);
+
+  bool get _isCustomer => widget.user.role == UserRole.customer;
+
+  // Nama lawan transaksi: resto bagi pemesan, pemesan bagi resto
+  String _counterpartName(FoodOrder order) =>
+      _isCustomer ? order.restaurantName : order.customerName;
+
+  // Membuka chat pesanan ini
+  void _openChat(FoodOrder order) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(
+          orderId: order.id,
+          user: widget.user,
+          services: widget.services,
+          title: _counterpartName(order),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,19 +96,33 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       key: const ValueKey('order'),
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
       children: [
-        FadeSlideIn(child: _OrderHeader(order: order)),
+        FadeSlideIn(
+          child: _OrderHeader(order: order, title: _counterpartName(order)),
+        ),
         const SizedBox(height: 16),
         FadeSlideIn(index: 1, child: _OrderItemsCard(order: order)),
+        const SizedBox(height: 16),
+        FadeSlideIn(
+          index: 2,
+          child: FilledButton.tonalIcon(
+            onPressed: () => _openChat(order),
+            icon: const Icon(Icons.chat_bubble_outline_rounded),
+            label: Text(
+              _isCustomer ? 'Chat dengan resto' : 'Chat dengan pemesan',
+            ),
+          ),
+        ),
       ],
     );
   }
 }
 
-// Kepala detail: resto, waktu pesan, dan status
+// Kepala detail: nama lawan transaksi, waktu pesan, dan status
 class _OrderHeader extends StatelessWidget {
   final FoodOrder order;
+  final String title;
 
-  const _OrderHeader({required this.order});
+  const _OrderHeader({required this.order, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +144,7 @@ class _OrderHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(order.restaurantName, style: text.titleMedium),
+                  Text(title, style: text.titleMedium),
                   const SizedBox(height: 4),
                   Text(
                     createdAt == null ? 'Baru saja' : formatDateTime(createdAt),

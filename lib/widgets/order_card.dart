@@ -56,18 +56,18 @@ class OrderCard extends StatelessWidget {
                   ],
                 ),
               ),
-              OrderStatusChip(status: order.status),
             ],
           ),
           const SizedBox(height: 12),
+          // Status di baris bawah agar nama dan waktu tidak terpotong
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  '$itemCount item',
-                  style: text.bodyMedium?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
+              OrderStatusChip(status: order.status),
+              const Spacer(),
+              Text(
+                '$itemCount item · ',
+                style: text.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
               Text(formatRupiah(order.total), style: text.titleMedium),

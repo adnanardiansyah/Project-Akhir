@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/cart_item.dart';
 import '../models/order.dart';
 import '../models/restaurant.dart';
+import 'firestore_write.dart';
 
 // Akses data pesanan di koleksi orders
 class OrderService {
@@ -11,9 +12,6 @@ class OrderService {
 
   CollectionReference<Map<String, dynamic>> get _orders =>
       _firestore.collection('orders');
-
-  // Batas tunggu konfirmasi server; setelahnya Firestore tetap mengirim saat kembali online
-  static const Duration _writeTimeout = Duration(seconds: 10);
 
   // Menulis pesanan baru berstatus pending dan mengembalikan id-nya
   Future<String> createOrder({
@@ -28,20 +26,20 @@ class OrderService {
     final items = cartItems.map(OrderItem.fromCartItem).toList();
     // Id dibuat di perangkat agar pesanan bisa langsung dibuka walau koneksi lambat
     final doc = _orders.doc();
-    await doc
-        .set({
-          'customerUid': customerUid,
-          'customerName': customerName,
-          'restaurantId': restaurant.id,
-          'restaurantName': restaurant.name,
-          'items': items.map((item) => item.toMap()).toList(),
-          'total': orderTotal(items),
-          'status': OrderStatus.pending.name,
-          'paymentMethod': null,
-          'createdAt': FieldValue.serverTimestamp(),
-          'paidAt': null,
-        })
-        .timeout(_writeTimeout, onTimeout: () {});
+    await awaitWrite(
+      doc.set({
+        'customerUid': customerUid,
+        'customerName': customerName,
+        'restaurantId': restaurant.id,
+        'restaurantName': restaurant.name,
+        'items': items.map((item) => item.toMap()).toList(),
+        'total': orderTotal(items),
+        'status': OrderStatus.pending.name,
+        'paymentMethod': null,
+        'createdAt': FieldValue.serverTimestamp(),
+        'paidAt': null,
+      }),
+    );
     return doc.id;
   }
 
@@ -53,10 +51,18 @@ class OrderService {
     });
   }
 
-  // Aliran pesanan milik pemesan, terbaru di atas; diurutkan di aplikasi agar tanpa indeks gabungan
-  Stream<List<FoodOrder>> watchCustomerOrders(String customerUid) {
+  // Aliran pesanan milik pemesan, terbaru di atas
+  Stream<List<FoodOrder>> watchCustomerOrders(String customerUid) =>
+      _watchOrdersWhere('customerUid', customerUid);
+
+  // Aliran pesanan untuk satu resto, terbaru di atas
+  Stream<List<FoodOrder>> watchRestaurantOrders(String restaurantId) =>
+      _watchOrdersWhere('restaurantId', restaurantId);
+
+  // Pesanan dengan satu field sama dengan nilai; diurutkan di aplikasi agar tanpa indeks gabungan
+  Stream<List<FoodOrder>> _watchOrdersWhere(String field, String value) {
     return _orders
-        .where('customerUid', isEqualTo: customerUid)
+        .where(field, isEqualTo: value)
         .snapshots()
         .map(
           (snapshot) => sortNewestFirst(

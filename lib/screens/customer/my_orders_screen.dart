@@ -5,7 +5,7 @@ import '../../models/order.dart';
 import '../../services/app_services.dart';
 import '../../widgets/order_card.dart';
 import '../../widgets/stream_list_view.dart';
-import 'order_detail_screen.dart';
+import '../shared/order_detail_screen.dart';
 
 // Daftar pesanan milik pemesan, terbaru di atas
 class MyOrdersScreen extends StatelessWidget {
@@ -18,8 +18,11 @@ class MyOrdersScreen extends StatelessWidget {
   void _openOrder(BuildContext context, FoodOrder order) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) =>
-            OrderDetailScreen(orderId: order.id, services: services),
+        builder: (_) => OrderDetailScreen(
+          orderId: order.id,
+          user: user,
+          services: services,
+        ),
       ),
     );
   }

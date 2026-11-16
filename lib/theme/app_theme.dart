@@ -31,9 +31,17 @@ ThemeData _buildTheme(Brightness brightness) {
     dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
   );
   // Mode terang: oranye cerah senada logo, tetap terbaca dengan teks putih tebal
-  final scheme = isLight
+  final primaryScheme = isLight
       ? seeded.copyWith(primary: brandOrangeDeep, onPrimary: Colors.white)
       : seeded;
+  // Tombol tonal dan chip memakai oranye tipis di atas latar, senada dengan aksen
+  final scheme = primaryScheme.copyWith(
+    secondaryContainer: Color.alphaBlend(
+      primaryScheme.primary.withValues(alpha: 0.12),
+      primaryScheme.surface,
+    ),
+    onSecondaryContainer: primaryScheme.primary,
+  );
   final base = ThemeData(
     useMaterial3: true,
     colorScheme: scheme,

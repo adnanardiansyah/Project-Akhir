@@ -7,7 +7,7 @@ Mengikuti `PRD.md` dan `ARSITEKTUR.md`. Jadwal di bawah adalah **usulan** (hari 
 - Sebelum mulai koding, cek pekerjaan sesuai `PRD.md`, `ARSITEKTUR.md`, dan `TODO.md`.
 - Sebelum menambah logika, endpoint, atau berkas, cek kode yang ada supaya tidak duplikat. Tidak ada dead code.
 - Identifier (variabel, fungsi, kelas, berkas) bahasa Inggris. Komentar bahasa Indonesia, satu baris pendek yang menjelaskan fungsi kode.
-- Agen tidak menjalankan perintah git yang mengubah repositori dan tidak push. Commit dilakukan sendiri; agen menyiapkan pesan commit pendek bahasa Inggris dengan awalan tipe, tanpa atribusi agen. Pengingat commit satu kali per langkah.
+- Mulai L4 (keputusan 17 Nov 2026): agen membuat commit sendiri satu kali di akhir tiap langkah, setelah tes dan peninjauan, dengan pesan pendek bahasa Inggris berawalan tipe, tanpa atribusi agen. Agen tidak push dan tidak menjalankan git lain yang mengubah riwayat. Sebelum commit, pastikan `env.json` tidak ikut.
 - Tes dinilai oleh agen yang berbeda dari penulis kode.
 - Klaim harus terbukti: baca kode, keluaran perintah, atau dokumentasi resmi. Kalau belum terbukti, dicek dulu, lalu tanya.
 - **Rekam layar sambil mengerjakan** setiap langkah (untuk video N2, N3), dan catat error nyata yang muncul (untuk bab 5.2 laporan).

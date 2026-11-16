@@ -5,6 +5,7 @@ import 'app.dart';
 import 'firebase_options.dart';
 import 'services/app_services.dart';
 import 'services/auth_service.dart';
+import 'services/chat_service.dart';
 import 'services/order_service.dart';
 import 'services/restaurant_service.dart';
 
@@ -18,6 +19,7 @@ Future<void> main() async {
         auth: AuthService(),
         restaurants: RestaurantService(),
         orders: OrderService(),
+        chat: ChatService(),
       ),
     ),
   );

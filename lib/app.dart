@@ -162,7 +162,7 @@ class _ProfileGateState extends State<_ProfileGate> {
       UserRole.restaurant => IncomingOrdersScreen(
         key: const ValueKey('restaurant-home'),
         user: appUser,
-        authService: widget.services.auth,
+        services: widget.services,
       ),
     };
   }

@@ -40,12 +40,12 @@ lib/
   screens/
     auth/                   // login_screen, register_screen
     customer/               // restaurant_list_screen, menu_screen, cart_screen,
-                            // order_detail_screen, payment_screen, my_orders_screen
+                            // payment_screen, my_orders_screen
     restaurant/             // incoming_orders_screen
-    shared/                 // chat_screen
+    shared/                 // chat_screen, order_detail_screen (dipakai pemesan dan resto)
   theme/                    // app_theme: warna, tipografi, bentuk, durasi animasi
   widgets/                  // komponen kecil yang dipakai ulang
-  utils/                    // format_rupiah, format_distance
+  utils/                    // format_rupiah, format_date_time, form_validators, format_distance
 ```
 
 Font Plus Jakarta Sans (SIL OFL 1.1) dibundel di `assets/fonts/` dan didaftarkan di `pubspec.yaml`; animasi memakai fitur bawaan Flutter (tanpa paket tambahan).

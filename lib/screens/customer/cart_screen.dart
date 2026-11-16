@@ -11,7 +11,7 @@ import '../../widgets/loading_button.dart';
 import '../../widgets/quantity_stepper.dart';
 import '../../widgets/restaurant_avatar.dart';
 import '../../widgets/state_message.dart';
-import 'order_detail_screen.dart';
+import '../shared/order_detail_screen.dart';
 
 // Layar keranjang: atur jumlah, lihat total, lalu buat pesanan
 class CartScreen extends StatefulWidget {
@@ -50,8 +50,11 @@ class _CartScreenState extends State<CartScreen> {
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (_) =>
-                OrderDetailScreen(orderId: orderId, services: widget.services),
+            builder: (_) => OrderDetailScreen(
+              orderId: orderId,
+              user: widget.user,
+              services: widget.services,
+            ),
           ),
           (route) => route.isFirst,
         );

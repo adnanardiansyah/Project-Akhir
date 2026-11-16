@@ -1,0 +1,143 @@
+# PRD — Aplikasi Pesan Makanan (Projek Akhir Flutter)
+
+Dokumen ini turunan dari modul "Projek Akhir" (1 halaman). Contoh laporan praktikum yang dikirim hanya acuan format laporan, bukan acuan isi proyek.
+
+## 1. Identitas
+
+- Mata kuliah: Pemrograman Aplikasi Mobile (Flutter)
+- Kelompok: Adnan Ardiansyah dan Syifa Angela, kelas TRKJ 3-B (dari contoh laporan; kelompok sama sesuai konfirmasi)
+- Dosen pengampu: Hari Toha Hidayat, S.Si., M.Cs. (dari contoh laporan)
+- Demo: **30 November 2026**, di kampus (Politeknik Negeri Lhokseumawe)
+- Nama kelompok untuk video: **belum diputuskan** (modul menyebut "nama kelompok", contoh laporan hanya mencantumkan nama anggota)
+- Pembagian tugas anggota: **belum ditentukan**
+
+## 2. Tujuan
+
+Membuat aplikasi mobile Flutter untuk memesan makanan dari resto: pemesan melihat menu dan harga, mengobrol dengan resto untuk memastikan pesanan, membayar, dan melihat jarak rute ke resto.
+
+## 3. Sumber kebutuhan (butir modul)
+
+Fitur wajib dari modul:
+
+| ID | Butir modul (ringkas) |
+|---|---|
+| M1 | Menu dan harga makanan |
+| M2 | Chat dengan pihak resto untuk pemilihan toping, level pedas, dan ketersediaan makanan |
+| M3 | Pembayaran |
+| M4 | Menampilkan jarak tempuh antara tempat resto dan pemesan |
+| M5 | Database memakai Firebase atau SQL |
+
+Catatan dan penugasan dari modul:
+
+| ID | Butir modul (ringkas) |
+|---|---|
+| N1 | Buat laporan lengkap proses pembuatan aplikasi |
+| N2 | Buat video proses pembuatan, step by step, lengkap |
+| N3 | Durasi video minimal 15 menit |
+| N4 | Demo pada 30 November 2026 di kampus |
+| N5 | Kumpulkan laporan dan link video yang diupload ke YouTube |
+| N6 | Video yang tidak bisa dijalankan atau dibuka mengurangi nilai |
+| N7 | Video memuat nama kelompok, logo PNL, dan nama dosen pengampu |
+
+## 4. Keputusan
+
+Sudah disetujui (17 November 2026):
+
+| ID | Keputusan |
+|---|---|
+| K1 | Database: **Firebase** (Authentication + Cloud Firestore) |
+| K2 | **Satu aplikasi dengan dua peran**: pemesan (customer) dan resto (restaurant) |
+| K3 | Pembayaran: **simulasi** (alur pembayaran tanpa uang sungguhan), kecuali dosen meminta pembayaran sungguhan |
+| K4 | **Banyak resto**: struktur data mendukung banyak resto, demo memakai 2 sampai 3 resto contoh |
+| K5 | Jarak tempuh: **jarak rute jalan** (bukan garis lurus), memakai OpenRouteService |
+
+Usulan, **belum dikonfirmasi** (ubah di sini bila tidak cocok):
+
+| ID | Usulan |
+|---|---|
+| U1 | Platform target: Android |
+| U2 | Login email dan password (modul tidak menyebut login, tapi dua peran butuh identitas) |
+| U3 | Akun dan data resto serta menu diisi sebagai data contoh lewat Firebase Console; tidak ada layar resto untuk mengelola menu |
+| U4 | Pemesan hanya bisa mendaftar sebagai pemesan; akun resto dibuat manual |
+| U5 | Status pesanan: `pending`, `confirmed`, `paid`, `cancelled` |
+| U6 | Tidak ada cadangan jarak garis lurus; kalau rute gagal dihitung, tampil pesan "jarak tidak tersedia" |
+
+## 5. Peran dan alur
+
+**Pemesan**
+1. Daftar atau masuk.
+2. Melihat daftar resto beserta jarak rute (M4, M1).
+3. Memilih resto, melihat menu dan harga (M1), menambah ke keranjang.
+4. Membuat pesanan, status `pending`.
+5. Mengobrol dengan resto pada pesanan itu: toping, level pedas, ketersediaan (M2).
+6. Setelah resto mengonfirmasi (`confirmed`), memilih metode bayar simulasi dan membayar (M3), status `paid`.
+
+**Resto**
+1. Masuk dengan akun resto.
+2. Melihat pesanan masuk untuk restonya saja.
+3. Membalas chat pada pesanan (M2).
+4. Mengonfirmasi atau membatalkan pesanan.
+
+Pesanan bisa dibatalkan (`cancelled`) oleh resto atau pemesan sebelum status `paid`.
+
+## 6. Kebutuhan fungsional
+
+| ID | Kebutuhan | Butir modul |
+|---|---|---|
+| FR-1 | Daftar resto dan menu: nama makanan dan harga (format rupiah) | M1 |
+| FR-2 | Keranjang dan pembuatan pesanan, total dihitung dari harga menu | M1 |
+| FR-3 | Chat teks per pesanan antara pemesan dan resto, pesan muncul tanpa refresh | M2 |
+| FR-4 | Pembayaran simulasi: pilih metode, lihat ringkasan total, konfirmasi, status menjadi `paid` | M3 |
+| FR-5 | Jarak rute dari lokasi perangkat pemesan ke lokasi resto, tampil di daftar resto dan detail pesanan | M4 |
+| FR-6 | Data (pengguna, resto, menu, pesanan, chat) tersimpan di Firebase | M5 |
+| FR-7 | Login, logout, dan tampilan sesuai peran | turunan U2 |
+
+## 7. Kebutuhan non-fungsional
+
+- Chat realtime: pesan baru muncul di perangkat lawan bicara tanpa refresh.
+- Aplikasi tidak menutup sendiri saat internet atau API jarak gagal; tampil pesan yang jelas.
+- API key OpenRouteService tidak masuk ke repositori.
+- Demo butuh internet (Firebase dan OpenRouteService); siapkan hotspot cadangan.
+- Teks antarmuka dalam bahasa Indonesia.
+
+## 8. Di luar cakupan
+
+Pembayaran sungguhan (payment gateway), layar resto untuk mengelola menu, notifikasi push, rating atau ulasan, ongkos kirim, pelacakan kurir, navigasi peta, iOS.
+
+## 9. Deliverable non-aplikasi
+
+| ID | Deliverable | Catatan |
+|---|---|---|
+| N1 | Laporan | Mengikuti struktur contoh: Cover, Lembar Pengesahan, Pendahuluan, Dasar Teori, Alat dan Bahan, Langkah-Langkah, Hasil dan Pembahasan, Kesimpulan dan Saran, Daftar Pustaka |
+| N2, N3 | Video proses | Direkam sambil mengerjakan, tiap langkah di `TODO.md` jadi satu segmen; total minimal 15 menit |
+| N7 | Identitas di video | Nama kelompok, logo PNL, nama dosen pengampu |
+| N5, N6 | YouTube | Atur visibilitas supaya bisa dibuka tanpa login (publik atau tidak publik dengan link); tes buka dari perangkat lain sebelum dikumpulkan |
+| N4 | Demo | 30 November 2026, di kampus |
+
+## 10. Kriteria selesai
+
+- M1: daftar resto, menu, dan harga tampil dari Firestore.
+- M2: dua perangkat (pemesan dan resto) saling kirim pesan pada satu pesanan, muncul tanpa refresh.
+- M3: pembayaran simulasi mengubah status pesanan menjadi `paid`.
+- M4: jarak rute tampil dalam km dan sesuai dengan hasil OpenRouteService untuk koordinat yang sama.
+- M5: semua data ada di Firebase, bukan data tetap di kode.
+- N1 sampai N7: laporan jadi, video minimal 15 menit memuat identitas, terunggah dan bisa dibuka dari perangkat lain.
+
+## 11. Risiko
+
+| Risiko | Mitigasi |
+|---|---|
+| Internet kampus lemah saat demo | Hotspot cadangan, uji sehari sebelumnya |
+| Batas OpenRouteService gratis (Directions 2.000 per hari dan 40 per menit menurut halaman paket resmi) | Hitung jarak sekali per resto per sesi, bukan tiap layar dibuka |
+| Waktu sekitar 13 hari, laporan dan video ikut dikerjakan | Pekerjaan dipecah kecil, rekam dan catat tiap langkah saat dikerjakan |
+| Video kurang dari 15 menit atau tidak bisa dibuka | Pantau total menit di tabel pelacak `TODO.md`, tes link di akhir |
+| Lokasi GPS emulator tidak sesuai | Atur lokasi emulator manual saat uji |
+| Batas waktu pengumpulan laporan dan video tidak tertulis di modul | Tanyakan ke dosen |
+
+## 12. Pertanyaan terbuka
+
+1. Nama kelompok untuk video (ada nama resmi atau cukup nama anggota).
+2. Pembagian tugas Adnan dan Syifa.
+3. Batas waktu pengumpulan laporan dan link video.
+4. Apakah dosen mewajibkan pembayaran sungguhan.
+5. Konfirmasi usulan U1 sampai U6.

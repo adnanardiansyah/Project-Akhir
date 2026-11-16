@@ -1,0 +1,13 @@
+{
+  "name": "projects/food-order-app-pnl/databases/(default)/documents/restaurants/resto1/menuItems/teh-tarik",
+  "fields": {
+    "name": {
+      "stringValue": "Teh Tarik"
+    },
+    "price": {
+      "integerValue": "9000"
+    }
+  },
+  "createTime": "2026-11-16T18:45:20.490211Z",
+  "updateTime": "2026-11-16T18:51:15.933374Z"
+}

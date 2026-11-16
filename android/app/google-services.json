@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "80905138870",
+    "project_id": "food-order-app-pnl",
+    "storage_bucket": "food-order-app-pnl.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:80905138870:android:a1eb716a11b91a46922c17",
+        "android_client_info": {
+          "package_name": "id.ac.pnl.food_order_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNzt-wfnzt__Hzc704BJSKOYjtf8DoUUo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

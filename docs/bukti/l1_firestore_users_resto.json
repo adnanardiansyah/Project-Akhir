@@ -1,0 +1,58 @@
+{"restaurants_resto1":
+{
+  "name": "projects/food-order-app-pnl/databases/(default)/documents/restaurants/resto1",
+  "fields": {
+    "location": {
+      "geoPointValue": {
+        "latitude": 5.1801,
+        "longitude": 97.1507
+      }
+    },
+    "ownerUid": {
+      "stringValue": "EtBTDRIkWRgOVYSKeDbUcpSEBXg2"
+    },
+    "address": {
+      "stringValue": "Lhokseumawe (data contoh)"
+    },
+    "name": {
+      "stringValue": "Resto Contoh 1"
+    }
+  },
+  "createTime": "2026-11-16T17:43:01.477603Z",
+  "updateTime": "2026-11-16T18:20:04.943612Z"
+}
+,"users":
+{
+  "documents": [
+    {
+      "name": "projects/food-order-app-pnl/databases/(default)/documents/users/EtBTDRIkWRgOVYSKeDbUcpSEBXg2",
+      "fields": {
+        "displayName": {
+          "stringValue": "Resto Contoh 1"
+        },
+        "role": {
+          "stringValue": "restaurant"
+        },
+        "restaurantId": {
+          "stringValue": "resto1"
+        }
+      },
+      "createTime": "2026-11-16T18:20:04.600665Z",
+      "updateTime": "2026-11-16T18:20:04.600665Z"
+    },
+    {
+      "name": "projects/food-order-app-pnl/databases/(default)/documents/users/sf1MLMCrIngV6dbCbWf5ioTUdbu2",
+      "fields": {
+        "role": {
+          "stringValue": "customer"
+        },
+        "displayName": {
+          "stringValue": "rian"
+        }
+      },
+      "createTime": "2026-11-16T18:25:25.918370Z",
+      "updateTime": "2026-11-16T18:25:25.918370Z"
+    }
+  ]
+}
+}

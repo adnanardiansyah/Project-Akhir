@@ -22,6 +22,16 @@ class RestaurantService {
         );
   }
 
+  // Membaca satu resto sekali; null bila tidak ada atau tidak valid
+  Future<Restaurant?> fetchRestaurant(String restaurantId) async {
+    final doc = await _firestore
+        .collection('restaurants')
+        .doc(restaurantId)
+        .get();
+    final data = doc.data();
+    return data == null ? null : Restaurant.fromMap(doc.id, data);
+  }
+
   // Aliran menu satu resto urut nama; dokumen tidak valid dilewati
   Stream<List<MenuItem>> watchMenuItems(String restaurantId) {
     return _firestore

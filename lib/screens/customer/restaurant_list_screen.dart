@@ -8,6 +8,8 @@ import '../../widgets/cart_bar.dart';
 import '../../widgets/logout_button.dart';
 import '../../widgets/pressable_card.dart';
 import '../../widgets/restaurant_avatar.dart';
+import '../../widgets/route_api_key_button.dart';
+import '../../widgets/route_distance_label.dart';
 import '../../widgets/stream_list_view.dart';
 import 'cart_screen.dart';
 import 'menu_screen.dart';
@@ -37,6 +39,7 @@ class RestaurantListScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Pesan Makanan'),
         actions: [
+          RouteApiKeyButton(service: services.routeDistance),
           IconButton(
             tooltip: 'Pesanan saya',
             icon: const Icon(Icons.receipt_long_rounded),
@@ -58,6 +61,7 @@ class RestaurantListScreen extends StatelessWidget {
             header: _Greeting(name: user.displayName),
             itemBuilder: (context, restaurant) => _RestaurantCard(
               restaurant: restaurant,
+              services: services,
               onTap: () => _push(
                 context,
                 MenuScreen(
@@ -112,12 +116,17 @@ class _Greeting extends StatelessWidget {
   }
 }
 
-// Kartu satu resto: avatar, nama, alamat
+// Kartu satu resto: avatar, nama, alamat, dan jarak rute
 class _RestaurantCard extends StatelessWidget {
   final Restaurant restaurant;
+  final AppServices services;
   final VoidCallback onTap;
 
-  const _RestaurantCard({required this.restaurant, required this.onTap});
+  const _RestaurantCard({
+    required this.restaurant,
+    required this.services,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -157,6 +166,11 @@ class _RestaurantCard extends StatelessWidget {
                     ],
                   ),
                 ],
+                const SizedBox(height: 6),
+                RouteDistanceLabel(
+                  services: services,
+                  loadDestination: () async => restaurant.location,
+                ),
               ],
             ),
           ),

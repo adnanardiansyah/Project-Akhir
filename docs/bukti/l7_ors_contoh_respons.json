@@ -1,0 +1,70 @@
+{
+  "bbox": [
+    97.138991,
+    5.174624,
+    97.151413,
+    5.179962
+  ],
+  "features": [
+    {
+      "bbox": [
+        97.138991,
+        5.174624,
+        97.151413,
+        5.179962
+      ],
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            97.150592,
+            5.179962
+          ],
+          [
+            97.150684,
+            5.179891
+          ],
+          [
+            97.150927,
+            5.179767
+          ]
+        ]
+      },
+      "properties": {
+        "summary": {
+          "distance": 2280.7,
+          "duration": 292.1
+        }
+      },
+      "type": "Feature"
+    }
+  ],
+  "metadata": {
+    "query": {
+      "coordinates": [
+        [
+          97.1507,
+          5.1801
+        ],
+        [
+          97.139,
+          5.179
+        ]
+      ],
+      "format": "json",
+      "profile": "driving-car",
+      "profileName": "driving-car"
+    },
+    "attribution": "openrouteservice.org | OpenStreetMap contributors",
+    "engine": {
+      "build_date": "2026-10-14T07:31:58Z",
+      "graph_date": "2026-11-10T22:42:26Z",
+      "osm_date": "2026-11-08T00:00:00Z",
+      "version": "10.1.0"
+    },
+    "service": "routing",
+    "system_message": "Please note that the URL api.openrouteservice.org has been deprecated. All information available at ask.openrouteservice.org",
+    "timestamp": 1794863523149
+  },
+  "type": "FeatureCollection"
+}

@@ -13,6 +13,7 @@ import '../../widgets/loading_button.dart';
 import '../../widgets/order_progress.dart';
 import '../../widgets/order_status_chip.dart';
 import '../../widgets/restaurant_avatar.dart';
+import '../../widgets/route_distance_label.dart';
 import '../../widgets/state_message.dart';
 import '../customer/payment_screen.dart';
 import 'chat_screen.dart';
@@ -165,7 +166,20 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
       children: [
         FadeSlideIn(
-          child: _OrderHeader(order: order, title: _counterpartName(order)),
+          child: _OrderHeader(
+            order: order,
+            title: _counterpartName(order),
+            // Jarak rute hanya bermakna dari perangkat pemesan (FR-5)
+            distance: _isCustomer
+                ? RouteDistanceLabel(
+                    services: widget.services,
+                    loadDestination: () async =>
+                        (await widget.services.restaurants.fetchRestaurant(
+                          order.restaurantId,
+                        ))?.location,
+                  )
+                : null,
+          ),
         ),
         const SizedBox(height: 16),
         FadeSlideIn(
@@ -205,12 +219,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 }
 
-// Kepala detail: nama lawan transaksi, waktu pesan, dan status
+// Kepala detail: nama lawan transaksi, waktu pesan, status, dan jarak bila pemesan
 class _OrderHeader extends StatelessWidget {
   final FoodOrder order;
   final String title;
+  final Widget? distance;
 
-  const _OrderHeader({required this.order, required this.title});
+  const _OrderHeader({
+    required this.order,
+    required this.title,
+    required this.distance,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -242,6 +261,10 @@ class _OrderHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   OrderStatusChip(status: order.status),
+                  if (distance != null) ...[
+                    const SizedBox(height: 8),
+                    distance!,
+                  ],
                 ],
               ),
             ),

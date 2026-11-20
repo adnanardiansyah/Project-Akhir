@@ -54,6 +54,30 @@ class _RoleRouter extends StatefulWidget {
 class _RoleRouterState extends State<_RoleRouter> {
   late final Stream<User?> _authStream = widget.services.auth
       .authStateChanges();
+  late StreamSubscription<User?> _authSubscription;
+  String? _activeUid;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = _authStream.listen(_clearKeyOnAccountChange);
+  }
+
+  @override
+  void dispose() {
+    unawaited(_authSubscription.cancel());
+    super.dispose();
+  }
+
+  // Key jarak sesi sebelumnya tidak dipakai setelah akun berganti atau keluar
+  void _clearKeyOnAccountChange(User? user) {
+    final nextUid = user?.uid;
+    if (_activeUid == nextUid) return;
+    if (_activeUid != null) {
+      widget.services.routeDistance.clearPersonalApiKey();
+    }
+    _activeUid = nextUid;
+  }
 
   @override
   Widget build(BuildContext context) {

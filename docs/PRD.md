@@ -96,7 +96,7 @@ Pesanan bisa dibatalkan (`cancelled`) oleh resto atau pemesan sebelum status `pa
 
 - Chat realtime: pesan baru muncul di perangkat lawan bicara tanpa refresh.
 - Aplikasi tidak menutup sendiri saat internet atau API jarak gagal; tampil pesan yang jelas.
-- API key OpenRouteService tidak masuk ke repositori.
+- API key OpenRouteService tidak masuk ke repositori atau aplikasi bawaan; setiap pengguna memasukkan key miliknya sendiri untuk sesi berjalan.
 - Demo butuh internet (Firebase dan OpenRouteService); siapkan hotspot cadangan.
 - Teks antarmuka dalam bahasa Indonesia.
 
@@ -129,6 +129,7 @@ Pembayaran sungguhan (payment gateway), layar resto untuk mengelola menu, notifi
 |---|---|
 | Internet kampus lemah saat demo | Hotspot cadangan, uji sehari sebelumnya |
 | Batas OpenRouteService gratis (Directions 2.000 per hari dan 40 per menit menurut halaman paket resmi) | Hitung jarak sekali per resto per sesi, bukan tiap layar dibuka |
+| Pengguna belum memiliki key HeiGIT untuk jarak | Buat key pribadi di akun HeiGIT sebelum demo; jangan membagikan key milik anggota lain |
 | Waktu sekitar 13 hari, laporan dan video ikut dikerjakan | Pekerjaan dipecah kecil, rekam dan catat tiap langkah saat dikerjakan |
 | Video kurang dari 15 menit atau tidak bisa dibuka | Pantau total menit di tabel pelacak `TODO.md`, tes link di akhir |
 | Lokasi GPS emulator tidak sesuai | Atur lokasi emulator manual saat uji |

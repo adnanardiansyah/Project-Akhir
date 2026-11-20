@@ -6,8 +6,10 @@ import 'package:food_order_app/screens/customer/payment_screen.dart';
 import 'package:food_order_app/services/app_services.dart';
 import 'package:food_order_app/services/auth_service.dart';
 import 'package:food_order_app/services/chat_service.dart';
+import 'package:food_order_app/services/location_service.dart';
 import 'package:food_order_app/services/order_service.dart';
 import 'package:food_order_app/services/restaurant_service.dart';
+import 'package:food_order_app/services/route_distance_service.dart';
 
 // Pesanan terkonfirmasi untuk tes layar pembayaran
 const _confirmedOrder = FoodOrder(
@@ -27,6 +29,8 @@ AppServices _services() => AppServices(
   restaurants: RestaurantService(),
   orders: OrderService(),
   chat: ChatService(),
+  location: LocationService(),
+  routeDistance: RouteDistanceService(),
 );
 
 void main() {

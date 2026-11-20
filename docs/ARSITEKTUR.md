@@ -13,6 +13,7 @@ Perangkat Android (satu aplikasi Flutter, dua peran)
 ```
 
 Tidak ada server buatan sendiri. Aplikasi bicara langsung ke Firebase dan ke OpenRouteService.
+Setiap pengguna memasukkan API key miliknya sendiri saat aplikasi berjalan; key hanya disimpan di memori sesi.
 
 ## 2. Teknologi
 
@@ -111,20 +112,20 @@ Alasan `items` menyalin nama dan harga: harga di pesanan tidak berubah kalau men
 
 ## 6. Integrasi OpenRouteService
 
-Sudah terbukti dari dokumentasi resmi OpenRouteService (`giscience.github.io/openrouteservice`):
+Integrasi memakai host HeiGIT yang baru sesuai pengumuman resmi OpenRouteService:
+- Host `api.openrouteservice.org` sudah diganti dengan `api.heigit.org`; Directions memakai `https://api.heigit.org/openrouteservice/v2/directions/{profile}`.
+- Selain perubahan URL, parameter dan perilaku layanan tetap sama menurut pengumuman OpenRouteService.
+- Setiap pengguna aplikasi memasukkan API key miliknya sendiri. FAQ HeiGIT melarang key pribadi pengembang ditanam untuk semua pengguna aplikasi; key pengguna hanya ditahan di memori selama sesi.
+
+Format request dan respons Directions:
 - Urutan koordinat `[lon, lat]`, bukan `[lat, lon]` (halaman FAQ).
-- `GET /v2/directions/{profile}` mengembalikan GeoJSON; jarak total ada di `features[].properties.summary.distance` dengan satuan meter (halaman Requests and Return Types).
-- `POST /v2/directions/{profile}` mengembalikan JSON; jarak total di `routes[].summary.distance`, meter.
+- `GET /openrouteservice/v2/directions/{profile}` mengembalikan GeoJSON; jarak total ada di `features[].properties.summary.distance` dengan satuan meter (halaman Requests and Return Types).
+- Key dikirim di header `Authorization`; koordinat asal dan tujuan dikirim sebagai `start` dan `end`.
 - Batas paket gratis Standard: Directions 2.000 per hari dan 40 per menit; kena batas harian dibalas 403, batas per menit dibalas 429 (halaman paket dan FAQ resmi).
 
 Profil yang dipakai: `driving-car` (usulan).
 
-**Belum terbukti, harus dicek saat langkah L7 sebelum dikodekan:**
-- Cara mengirim API key (header atau parameter). Spesifikasi pihak ketiga menyebut header `Authorization`, dokumentasi resmi yang saya baca belum menyatakannya.
-- Alamat dasar API publik (`api.openrouteservice.org` muncul di contoh forum resmi ORS, belum dari dokumentasi referensi).
-Kedua hal ini diperiksa di API Playground resmi dan dicoba dengan satu permintaan nyata.
-
-Penanganan key: dikirim lewat `--dart-define=ORS_API_KEY=...` dan dibaca dengan `String.fromEnvironment`; tidak ditulis di kode dan tidak di-commit. Key yang tertanam di aplikasi tetap bisa diambil orang yang membongkar aplikasi; untuk tugas kuliah ini diterima dan dicatat di bagian saran laporan.
+Key tidak disimpan di repositori, konfigurasi build, atau penyimpanan perangkat. Pengguna memasukkannya lewat tombol kunci di beranda pemesan; key hilang saat aplikasi ditutup. Untuk aplikasi produksi yang memakai satu key milik pengelola, diperlukan proxy di server, bukan key klien.
 
 Kegagalan (tanpa internet, izin lokasi ditolak, 403, 429, rute tidak ditemukan): tampil "jarak tidak tersedia" (usulan U6), aplikasi tetap jalan.
 

@@ -46,7 +46,7 @@ Sudah disetujui (17 November 2026; K4 diperbarui 20 November 2026):
 | ID | Keputusan |
 |---|---|
 | K1 | Database: **Firebase** (Authentication + Cloud Firestore) |
-| K2 | **Satu aplikasi dengan dua peran**: pemesan (customer) dan resto (restaurant) |
+| K2 | **Satu aplikasi dengan tiga peran**: pemesan (customer), resto (restaurant), dan admin |
 | K3 | Pembayaran: **simulasi** (alur pembayaran tanpa uang sungguhan), kecuali dosen meminta pembayaran sungguhan |
 | K4 | **Banyak resto**: struktur data mendukung banyak resto, demo memakai 2 sampai 3 restoran nyata di Lhokseumawe |
 | K5 | Jarak tempuh: **jarak rute jalan** (bukan garis lurus), memakai OpenRouteService |
@@ -56,9 +56,9 @@ Usulan, **belum dikonfirmasi** (ubah di sini bila tidak cocok):
 | ID | Usulan |
 |---|---|
 | U1 | Platform target: Android |
-| U2 | Login email dan password (modul tidak menyebut login, tapi dua peran butuh identitas) |
+| U2 | Login email dan password untuk tiga peran |
 | U3 | Akun operator proyek dan data restoran/menu bersumber publik diatur lewat Firebase Console; tidak ada layar resto untuk mengelola menu; akun operator bukan akun resmi pemilik usaha |
-| U4 | Pemesan hanya bisa mendaftar sebagai pemesan; akun resto dibuat manual |
+| U4 | Pemesan hanya bisa mendaftar sebagai pemesan; akun resto dan admin dibuat manual oleh pengelola |
 | U5 | Status pesanan: `pending`, `confirmed`, `paid`, `cancelled` |
 | U6 | Tidak ada cadangan jarak garis lurus. Daftar resto memakai GPS pemesan saat itu. Saat checkout pemesan dapat menyalin GPS terbaru sebagai titik tujuan pesanan; jika tidak tersedia, pesanan tetap dapat dibuat tetapi jarak di detail tidak ditampilkan. Perubahan GPS berikutnya tidak mengubah titik pesanan. |
 
@@ -78,6 +78,12 @@ Usulan, **belum dikonfirmasi** (ubah di sini bila tidak cocok):
 3. Membalas chat pada pesanan (M2).
 4. Mengonfirmasi atau membatalkan pesanan.
 
+**Admin**
+1. Masuk dengan akun admin yang dibuat manual oleh pengelola.
+2. Memantau jumlah resto per status dan jumlah pesanan berjalan/dibayar.
+3. Mencari dan memfilter resto, lalu menyetujui, menolak, atau menangguhkan data resto.
+4. Melihat daftar pesanan dan statusnya untuk monitoring; tidak membaca chat pribadi.
+
 Pesanan bisa dibatalkan (`cancelled`) oleh resto atau pemesan sebelum status `paid`.
 
 ## 6. Kebutuhan fungsional
@@ -91,6 +97,7 @@ Pesanan bisa dibatalkan (`cancelled`) oleh resto atau pemesan sebelum status `pa
 | FR-5 | Jarak rute dari GPS pemesan ke resto di daftar; detail pesanan memakai titik tujuan yang disimpan saat checkout | M4 |
 | FR-6 | Data (pengguna, resto, menu, pesanan, chat) tersimpan di Firebase | M5 |
 | FR-7 | Login, logout, dan tampilan sesuai peran | turunan U2 |
+| FR-8 | Dashboard admin: ringkasan, pencarian/filter resto, tinjauan status resto, dan pemantauan pesanan | M5 |
 
 ## 7. Kebutuhan non-fungsional
 
@@ -98,6 +105,7 @@ Pesanan bisa dibatalkan (`cancelled`) oleh resto atau pemesan sebelum status `pa
 - Penulisan chat dan pesanan menunggu konfirmasi server; setelah 10 detik tanpa konfirmasi, aplikasi memberi tahu pengguna dan mencegah pesanan ganda.
 - Aplikasi tidak menutup sendiri saat internet atau API jarak gagal; tampil pesan yang jelas.
 - API key OpenRouteService tidak masuk ke repositori atau aplikasi bawaan; setiap pengguna memasukkan key miliknya sendiri untuk sesi berjalan.
+- Akun admin tidak dapat didaftarkan dari aplikasi; perubahan status tinjauan dan akses monitoring dibatasi oleh Firestore Rules.
 - Demo butuh internet (Firebase dan OpenRouteService); siapkan hotspot cadangan.
 - Teks antarmuka dalam bahasa Indonesia.
 
@@ -121,7 +129,7 @@ Pembayaran sungguhan (payment gateway), layar resto untuk mengelola menu, notifi
 - M2: dua perangkat (pemesan dan resto) saling kirim pesan pada satu pesanan, muncul tanpa refresh.
 - M3: pembayaran simulasi mengubah status pesanan menjadi `paid`.
 - M4: jarak rute tampil dalam km dan sesuai dengan hasil OpenRouteService untuk koordinat yang sama.
-- M5: semua data ada di Firebase, bukan data tetap di kode.
+- M5: semua data ada di Firebase, bukan data tetap di kode; admin dapat meninjau resto dan memantau status pesanan.
 - N1 sampai N7: laporan jadi, video minimal 15 menit memuat identitas, terunggah dan bisa dibuka dari perangkat lain.
 
 ## 11. Risiko

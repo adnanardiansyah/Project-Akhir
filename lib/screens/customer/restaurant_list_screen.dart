@@ -55,7 +55,7 @@ class RestaurantListScreen extends StatelessWidget {
           StreamListView<Restaurant>(
             streamFactory: services.restaurants.watchRestaurants,
             emptyIcon: Icons.storefront_rounded,
-            emptyMessage: 'Belum ada resto',
+            emptyMessage: 'Belum ada resto yang disetujui',
             errorMessage:
                 'Daftar resto gagal dimuat. Periksa koneksi atau akses Firestore.',
             bottomPadding: 120,

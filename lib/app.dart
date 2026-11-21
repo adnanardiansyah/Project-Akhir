@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import 'controllers/cart_controller.dart';
 import 'models/app_user.dart';
+import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/customer/restaurant_list_screen.dart';
 import 'screens/restaurant/incoming_orders_screen.dart';
@@ -186,6 +187,11 @@ class _ProfileGateState extends State<_ProfileGate> {
       ),
       UserRole.restaurant => IncomingOrdersScreen(
         key: const ValueKey('restaurant-home'),
+        user: appUser,
+        services: widget.services,
+      ),
+      UserRole.admin => AdminDashboardScreen(
+        key: const ValueKey('admin-home'),
         user: appUser,
         services: widget.services,
       ),

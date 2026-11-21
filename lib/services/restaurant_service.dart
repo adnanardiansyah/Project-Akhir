@@ -12,13 +12,19 @@ class RestaurantService {
   Stream<List<Restaurant>> watchRestaurants() {
     return _firestore
         .collection('restaurants')
-        .orderBy('name')
+        .where('reviewStatus', isEqualTo: RestaurantReviewStatus.approved.name)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => Restaurant.fromMap(doc.id, doc.data()))
-              .whereType<Restaurant>()
-              .toList(),
+          (snapshot) {
+            final restaurants = snapshot.docs
+                .map((doc) => Restaurant.fromMap(doc.id, doc.data()))
+                .whereType<Restaurant>()
+                .toList();
+            restaurants.sort(
+              (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+            );
+            return restaurants;
+          },
         );
   }
 

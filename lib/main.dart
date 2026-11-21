@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'app.dart';
 import 'firebase_options.dart';
 import 'services/app_services.dart';
+import 'services/admin_service.dart';
 import 'services/auth_service.dart';
 import 'services/chat_service.dart';
 import 'services/location_service.dart';
@@ -19,6 +20,7 @@ Future<void> main() async {
     FoodOrderApp(
       services: AppServices(
         auth: AuthService(),
+        admin: AdminService(),
         restaurants: RestaurantService(),
         orders: OrderService(),
         chat: ChatService(),

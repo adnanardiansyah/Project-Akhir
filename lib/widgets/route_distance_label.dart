@@ -6,10 +6,12 @@ import '../services/location_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/format_distance.dart';
 
-// Label jarak rute dari GPS perangkat ke resto.
+// Label jarak rute dari lokasi asal ke tujuan.
 class RouteDistanceLabel extends StatefulWidget {
   final AppServices services;
-  // Pemuat lokasi resto; detail pesanan perlu membaca resto dari Firestore.
+  // Bila ada, titik asal tetap dipakai untuk rute pesanan.
+  final Future<GeoPoint?> Function()? loadOrigin;
+  // Titik tujuan rute, misalnya resto di daftar atau pemesan pada detail.
   final Future<GeoPoint?> Function() loadDestination;
   // Berubah bila resto atau koordinat tujuan berubah.
   final Object destinationKey;
@@ -17,6 +19,7 @@ class RouteDistanceLabel extends StatefulWidget {
   const RouteDistanceLabel({
     super.key,
     required this.services,
+    this.loadOrigin,
     required this.loadDestination,
     required this.destinationKey,
   });
@@ -33,7 +36,9 @@ class _RouteDistanceLabelState extends State<RouteDistanceLabel> {
   void initState() {
     super.initState();
     widget.services.routeDistance.addListener(_onApiKeyChanged);
-    widget.services.location.addListener(_onLocationChanged);
+    if (widget.loadOrigin == null) {
+      widget.services.location.addListener(_onLocationChanged);
+    }
     _distance = _compute();
   }
 
@@ -46,9 +51,16 @@ class _RouteDistanceLabelState extends State<RouteDistanceLabel> {
       widget.services.routeDistance.addListener(_onApiKeyChanged);
       shouldRecompute = true;
     }
-    if (oldWidget.services.location != widget.services.location) {
-      oldWidget.services.location.removeListener(_onLocationChanged);
-      widget.services.location.addListener(_onLocationChanged);
+    final locationSourceChanged =
+        (oldWidget.loadOrigin == null) != (widget.loadOrigin == null) ||
+        oldWidget.services.location != widget.services.location;
+    if (locationSourceChanged) {
+      if (oldWidget.loadOrigin == null) {
+        oldWidget.services.location.removeListener(_onLocationChanged);
+      }
+      if (widget.loadOrigin == null) {
+        widget.services.location.addListener(_onLocationChanged);
+      }
       shouldRecompute = true;
     }
     if (shouldRecompute) _distance = _compute();
@@ -57,7 +69,9 @@ class _RouteDistanceLabelState extends State<RouteDistanceLabel> {
   @override
   void dispose() {
     widget.services.routeDistance.removeListener(_onApiKeyChanged);
-    widget.services.location.removeListener(_onLocationChanged);
+    if (widget.loadOrigin == null) {
+      widget.services.location.removeListener(_onLocationChanged);
+    }
     super.dispose();
   }
 
@@ -66,12 +80,12 @@ class _RouteDistanceLabelState extends State<RouteDistanceLabel> {
     setState(() => _distance = _compute());
   }
 
-  // Semua label memakai GPS terbaru yang dibagikan oleh LocationService.
+  // Label daftar resto memakai GPS terbaru yang dibagikan oleh LocationService.
   void _onLocationChanged() {
-    setState(() => _distance = _compute());
+    if (widget.loadOrigin == null) setState(() => _distance = _compute());
   }
 
-  // Key pribadi, GPS perangkat, dan koordinat resto diperlukan untuk rute.
+  // Key pribadi dan kedua koordinat diperlukan untuk menghitung rute.
   Future<_DistanceReading> _compute() async {
     if (!widget.services.routeDistance.hasPersonalApiKey) {
       return const _DistanceReading.unavailable(
@@ -79,34 +93,48 @@ class _RouteDistanceLabelState extends State<RouteDistanceLabel> {
       );
     }
 
+    final GeoPoint origin;
+    if (widget.loadOrigin != null) {
+      final loadedOrigin = await _loadOrigin();
+      if (loadedOrigin == null) {
+        return const _DistanceReading.unavailable(
+          'Koordinat asal belum tersedia',
+        );
+      }
+      origin = loadedOrigin;
+    } else {
+      final result = await widget.services.location.currentLocation();
+      if (result.location == null) {
+        final message = switch (result.issue) {
+          LocationIssue.serviceDisabled => 'Aktifkan GPS perangkat',
+          LocationIssue.permissionDenied => 'Izinkan akses lokasi',
+          LocationIssue.permissionDeniedForever =>
+            'Izinkan lokasi lewat Pengaturan',
+          LocationIssue.unavailable => 'Lokasi perangkat tidak terbaca',
+          null => 'Lokasi perangkat tidak terbaca',
+        };
+        return _DistanceReading.unavailable(message);
+      }
+      origin = result.location!;
+    }
+
     final GeoPoint? destination;
     try {
       destination = await widget.loadDestination();
     } catch (_) {
-      return const _DistanceReading.unavailable('Lokasi resto gagal dimuat');
+      return const _DistanceReading.unavailable(
+        'Koordinat tujuan gagal dimuat',
+      );
     }
     if (destination == null) {
       return const _DistanceReading.unavailable(
-        'Koordinat resto belum tersedia',
+        'Koordinat tujuan belum tersedia',
       );
-    }
-
-    final origin = await widget.services.location.currentLocation();
-    if (origin.location == null) {
-      final message = switch (origin.issue) {
-        LocationIssue.serviceDisabled => 'Aktifkan GPS perangkat',
-        LocationIssue.permissionDenied => 'Izinkan akses lokasi',
-        LocationIssue.permissionDeniedForever =>
-          'Izinkan lokasi lewat Pengaturan',
-        LocationIssue.unavailable => 'Lokasi perangkat tidak terbaca',
-        null => 'Lokasi perangkat tidak terbaca',
-      };
-      return _DistanceReading.unavailable(message);
     }
 
     try {
       final meters = await widget.services.routeDistance.distanceMeters(
-        origin.location!,
+        origin,
         destination,
       );
       if (meters != null) return _DistanceReading.success(meters);
@@ -116,6 +144,14 @@ class _RouteDistanceLabelState extends State<RouteDistanceLabel> {
     return const _DistanceReading.unavailable(
       'Rute gagal dihitung; periksa key dan koneksi',
     );
+  }
+
+  Future<GeoPoint?> _loadOrigin() async {
+    try {
+      return await widget.loadOrigin!();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _refreshLocation() async {
@@ -177,27 +213,28 @@ class _RouteDistanceLabelState extends State<RouteDistanceLabel> {
                   ),
                 ),
               ),
-              IconButton(
-                tooltip: 'Perbarui lokasi dan jarak',
-                onPressed:
-                    done &&
-                        widget.services.routeDistance.hasPersonalApiKey &&
-                        !_isRefreshing
-                    ? _refreshLocation
-                    : null,
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 32,
-                  height: 32,
+              if (widget.loadOrigin == null)
+                IconButton(
+                  tooltip: 'Perbarui lokasi dan jarak',
+                  onPressed:
+                      done &&
+                          widget.services.routeDistance.hasPersonalApiKey &&
+                          !_isRefreshing
+                      ? _refreshLocation
+                      : null,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 32,
+                    height: 32,
+                  ),
+                  icon: _isRefreshing
+                      ? const SizedBox.square(
+                          dimension: 14,
+                          child: CircularProgressIndicator(strokeWidth: 1.8),
+                        )
+                      : const Icon(Icons.refresh_rounded, size: 18),
                 ),
-                icon: _isRefreshing
-                    ? const SizedBox.square(
-                        dimension: 14,
-                        child: CircularProgressIndicator(strokeWidth: 1.8),
-                      )
-                    : const Icon(Icons.refresh_rounded, size: 18),
-              ),
             ],
           ),
         );

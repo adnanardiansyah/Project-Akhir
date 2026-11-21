@@ -161,6 +161,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         title: 'Pesanan tidak ditemukan',
       );
     }
+    final deliveryLocation = order.deliveryLocation;
+    final locationKey =
+        '${order.id}:${order.restaurantId}:'
+        '${deliveryLocation?.latitude}:${deliveryLocation?.longitude}';
     return ListView(
       key: const ValueKey('order'),
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
@@ -169,18 +173,35 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           child: _OrderHeader(
             order: order,
             title: _counterpartName(order),
-            // Jarak rute hanya bermakna dari perangkat pemesan (FR-5)
-            distance: _isCustomer
-                ? RouteDistanceLabel(
-                    key: ValueKey('${order.id}:${order.restaurantId}'),
+            // Titik tujuan terlihat oleh kedua pihak; rute dihitung untuk pemesan.
+            distance: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  deliveryLocation == null
+                      ? 'Titik pengantaran belum disimpan'
+                      : 'Tujuan: '
+                            '${deliveryLocation.latitude.toStringAsFixed(5)}, '
+                            '${deliveryLocation.longitude.toStringAsFixed(5)}',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (_isCustomer) ...[
+                  const SizedBox(height: 4),
+                  RouteDistanceLabel(
+                    key: ValueKey(locationKey),
                     services: widget.services,
-                    destinationKey: order.restaurantId,
-                    loadDestination: () async =>
+                    loadOrigin: () async =>
                         (await widget.services.restaurants.fetchRestaurant(
                           order.restaurantId,
                         ))?.location,
-                  )
-                : null,
+                    destinationKey: locationKey,
+                    loadDestination: () async => deliveryLocation,
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 16),

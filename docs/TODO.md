@@ -66,7 +66,7 @@ Mengikuti `PRD.md` dan `ARSITEKTUR.md`. Jadwal di bawah adalah **usulan** (hari 
 
 ### L7 — Jarak rute (25 Nov) — M4, FR-5
 - Pekerjaan: gunakan host HeiGIT resmi dan pola key pribadi per pengguna seperti di `ARSITEKTUR.md` bagian 6; implementasikan `location_service`, `route_distance_service`, tampilan di daftar resto dan detail pesanan, serta penanganan error.
-- Tes: tes unit pengurai respons dan endpoint HeiGIT; manual: pengguna memasukkan key miliknya di aplikasi, atur lokasi emulator, bandingkan jarak dengan hasil OpenRouteService untuk koordinat yang sama, uji izin lokasi ditolak dan tanpa internet.
+- Tes: tes unit pengurai respons dan endpoint HeiGIT; manual: pengguna memasukkan key miliknya di aplikasi, atur lokasi emulator, bandingkan jarak dengan hasil OpenRouteService untuk koordinat yang sama, pastikan detail tetap memakai titik yang disalin saat checkout setelah GPS berubah, uji izin lokasi ditolak dan tanpa internet.
 - Commit: `feat: add route distance via openrouteservice`
 
 ### L8 — Keamanan dan kondisi error (26 Nov) — M5

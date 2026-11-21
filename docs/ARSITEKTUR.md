@@ -8,8 +8,8 @@ Mengikuti `PRD.md` (keputusan K1 sampai K5, usulan U1 sampai U6).
 Perangkat Android (satu aplikasi Flutter, dua peran)
  ├─ Firebase Authentication   → login, identitas pengguna
  ├─ Cloud Firestore           → users, restaurants, menuItems, orders, messages (realtime)
- ├─ GPS perangkat             → lokasi pemesan
- └─ OpenRouteService (HTTPS)  → jarak rute pemesan → resto
+ ├─ GPS perangkat             → daftar resto dan titik tujuan checkout
+ └─ OpenRouteService (HTTPS)  → jarak rute ke resto / titik tujuan pesanan
 ```
 
 Tidak ada server buatan sendiri. Aplikasi bicara langsung ke Firebase dan ke OpenRouteService.
@@ -76,6 +76,7 @@ orders/{orderId}
   customerName: string             // salinan nama pemesan saat dipesan
   restaurantId: string
   restaurantName: string           // salinan nama resto saat dipesan
+  deliveryLocation: GeoPoint?       // salinan titik GPS tujuan saat checkout
   items: [{ menuItemId, name, price, qty }]   // salinan nama dan harga saat dipesan
   total: int
   status: "pending" | "confirmed" | "paid" | "cancelled"
@@ -90,7 +91,7 @@ orders/{orderId}/messages/{messageId}
   createdAt: timestamp
 ```
 
-Jarak tidak disimpan di Firestore; dihitung di aplikasi dari lokasi perangkat dan `location` resto.
+Nilai jarak tidak disimpan di Firestore. Titik GPS tujuan disalin ke `orders/{orderId}.deliveryLocation` saat checkout agar tetap sama untuk pesanan tersebut. Jarak di daftar resto memakai GPS terkini; jarak di detail pesanan dihitung dari koordinat resto ke titik tujuan pesanan yang tersimpan. Jika pemesan belum mengambil lokasi, pesanan tetap bisa dibuat dan jarak detail tidak tersedia.
 
 Kelas model pesanan di kode bernama `FoodOrder` (berkas `models/order.dart`) karena `cloud_firestore` juga mengekspor nama `Order`.
 
@@ -104,11 +105,11 @@ Alasan `items` menyalin nama dan harga: harga di pesanan tidak berubah kalau men
 
 1. **Login:** `auth_service` masuk, lalu baca `users/{uid}.role`; `app.dart` membuka layar pemesan atau resto.
 2. **Daftar resto dan menu (M1):** `StreamBuilder` pada `restaurants` dan `menuItems`.
-3. **Keranjang dan pesanan:** `cart_controller` menyimpan item di memori; "Buat Pesanan" menulis satu dokumen `orders` dengan status `pending`. Keranjang terkunci sampai server mengonfirmasi atau menolak; setelah 10 detik UI memberi tahu bahwa status masih menunggu.
+3. **Keranjang dan pesanan:** `cart_controller` menyimpan item di memori; pemesan dapat mengambil GPS terbaru sebagai titik tujuan tetap. "Buat Pesanan" menulis satu dokumen `orders` dengan status `pending` dan salinan koordinat tujuan bila tersedia. Keranjang terkunci sampai server mengonfirmasi atau menolak; setelah 10 detik UI memberi tahu bahwa status masih menunggu.
 4. **Chat (M2):** `chat_service` menulis ke `orders/{id}/messages`; kedua sisi mendengarkan koleksi yang sama diurutkan `createdAt`, sehingga pesan muncul tanpa refresh. Pesan lokal ditandai menunggu sampai server mengonfirmasi; bila write ditolak, teks dikembalikan ke kolom.
 5. **Konfirmasi dan batal:** resto mengubah `status` ke `confirmed` atau `cancelled`; pemesan hanya boleh membatalkan sebelum `paid`.
 6. **Pembayaran simulasi (M3):** pemesan memilih metode, `status` menjadi `paid`, `paymentMethod` dan `paidAt` terisi. Tidak ada uang sungguhan.
-7. **Jarak rute (M4):** `location_service` membagikan lokasi GPS terkini ke label di daftar resto dan detail pesanan. Tombol perbarui mengambil GPS baru dan semua label yang sedang tampil menghitung ulang. `route_distance_service` memanggil OpenRouteService; hasil meter diubah ke km oleh `format_distance`.
+7. **Jarak rute (M4):** daftar resto menghitung dari GPS terkini pemesan ke resto. Detail pesanan menghitung dari lokasi resto ke `deliveryLocation` yang tersimpan saat checkout, sehingga tujuan tidak bergeser saat pemesan berpindah. Tombol perbarui pada daftar mengambil GPS baru. `route_distance_service` memanggil OpenRouteService; hasil meter diubah ke km oleh `format_distance`.
 
 ## 6. Integrasi OpenRouteService
 
@@ -127,7 +128,7 @@ Profil yang dipakai: `driving-car` (usulan).
 
 Key tidak disimpan di repositori, konfigurasi build, atau penyimpanan perangkat. Pengguna memasukkannya lewat tombol kunci di beranda pemesan; key hilang saat aplikasi ditutup. Untuk aplikasi produksi yang memakai satu key milik pengelola, diperlukan proxy di server, bukan key klien.
 
-GPS disimpan di memori selama sesi akun dan dihapus saat akun berganti atau keluar. Jarak memakai GPS perangkat pemesan saat itu; koordinat pemesan tidak disimpan di dokumen pesanan.
+GPS terkini disimpan di memori selama sesi akun dan dihapus saat akun berganti atau keluar. Saat checkout, pemesan dapat menyalin koordinat GPS sebagai titik tujuan ke dokumen pesanan; salinan ini tidak berubah ketika GPS perangkat diperbarui. Koordinat resto tetap bersumber dari dokumen resto.
 
 Jika GPS mati atau izinnya ditolak, label memberi petunjuk untuk mengaktifkan GPS atau izin. Jika koordinat resto belum tersedia, label menyebutkannya. Jika rute gagal karena key, kuota, jaringan, atau rute tidak ditemukan, label menyarankan memeriksa key dan koneksi. Tidak ada cadangan jarak garis lurus; fitur lain tetap dapat dipakai.
 

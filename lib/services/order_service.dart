@@ -20,6 +20,7 @@ class OrderService {
     required String customerName,
     required Restaurant restaurant,
     required List<CartItem> cartItems,
+    required GeoPoint? deliveryLocation,
   }) async {
     if (cartItems.isEmpty) {
       throw ArgumentError('Keranjang kosong');
@@ -33,6 +34,7 @@ class OrderService {
         'customerName': customerName,
         'restaurantId': restaurant.id,
         'restaurantName': restaurant.name,
+        'deliveryLocation': deliveryLocation,
         'items': items.map((item) => item.toMap()).toList(),
         'total': orderTotal(items),
         'status': OrderStatus.pending.name,

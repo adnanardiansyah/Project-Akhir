@@ -13,7 +13,7 @@ Dokumen ini turunan dari modul "Projek Akhir" (1 halaman). Contoh laporan prakti
 
 ## 2. Tujuan
 
-Membuat aplikasi mobile Flutter untuk memesan makanan dari resto: pemesan melihat menu dan harga, mengobrol dengan resto untuk memastikan pesanan, membayar, dan melihat jarak rute ke resto.
+Membuat aplikasi mobile Flutter untuk memesan makanan dari resto: pemesan melihat menu dan harga, mengobrol dengan resto untuk memastikan pesanan, membayar, dan melihat jarak rute ke resto serta titik tujuan pesanan.
 
 ## 3. Sumber kebutuhan (butir modul)
 
@@ -60,7 +60,7 @@ Usulan, **belum dikonfirmasi** (ubah di sini bila tidak cocok):
 | U3 | Akun operator proyek dan data restoran/menu bersumber publik diatur lewat Firebase Console; tidak ada layar resto untuk mengelola menu; akun operator bukan akun resmi pemilik usaha |
 | U4 | Pemesan hanya bisa mendaftar sebagai pemesan; akun resto dibuat manual |
 | U5 | Status pesanan: `pending`, `confirmed`, `paid`, `cancelled` |
-| U6 | Tidak ada cadangan jarak garis lurus. Jarak memakai GPS perangkat pemesan saat itu; tombol perbarui mengambil lokasi terbaru. Jika GPS, koordinat resto, key, atau rute bermasalah, tampil petunjuk yang sesuai dan fitur lain tetap dapat dipakai. |
+| U6 | Tidak ada cadangan jarak garis lurus. Daftar resto memakai GPS pemesan saat itu. Saat checkout pemesan dapat menyalin GPS terbaru sebagai titik tujuan pesanan; jika tidak tersedia, pesanan tetap dapat dibuat tetapi jarak di detail tidak ditampilkan. Perubahan GPS berikutnya tidak mengubah titik pesanan. |
 
 ## 5. Peran dan alur
 
@@ -68,7 +68,7 @@ Usulan, **belum dikonfirmasi** (ubah di sini bila tidak cocok):
 1. Daftar atau masuk.
 2. Melihat daftar resto beserta jarak rute (M4, M1).
 3. Memilih resto, melihat menu dan harga (M1), menambah ke keranjang.
-4. Membuat pesanan, status `pending`.
+4. Opsional mengambil titik GPS tujuan di keranjang, lalu membuat pesanan berstatus `pending`; titik yang diambil disalin ke pesanan.
 5. Mengobrol dengan resto pada pesanan itu: toping, level pedas, ketersediaan (M2).
 6. Setelah resto mengonfirmasi (`confirmed`), memilih metode bayar simulasi dan membayar (M3), status `paid`.
 
@@ -85,10 +85,10 @@ Pesanan bisa dibatalkan (`cancelled`) oleh resto atau pemesan sebelum status `pa
 | ID | Kebutuhan | Butir modul |
 |---|---|---|
 | FR-1 | Daftar resto dan menu: nama makanan dan harga (format rupiah) | M1 |
-| FR-2 | Keranjang dan pembuatan pesanan, total dihitung dari harga menu | M1 |
+| FR-2 | Keranjang dan pembuatan pesanan, total dihitung dari harga menu; titik tujuan GPS dapat disalin saat checkout | M1 |
 | FR-3 | Chat teks per pesanan antara pemesan dan resto, pesan muncul tanpa refresh | M2 |
 | FR-4 | Pembayaran simulasi: pilih metode, lihat ringkasan total, konfirmasi, status menjadi `paid` | M3 |
-| FR-5 | Jarak rute dari lokasi perangkat pemesan ke lokasi resto, tampil di daftar resto dan detail pesanan | M4 |
+| FR-5 | Jarak rute dari GPS pemesan ke resto di daftar; detail pesanan memakai titik tujuan yang disimpan saat checkout | M4 |
 | FR-6 | Data (pengguna, resto, menu, pesanan, chat) tersimpan di Firebase | M5 |
 | FR-7 | Login, logout, dan tampilan sesuai peran | turunan U2 |
 

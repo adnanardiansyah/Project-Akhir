@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../controllers/cart_controller.dart';
@@ -7,6 +8,7 @@ import '../../models/app_user.dart';
 import '../../models/cart_item.dart';
 import '../../services/app_services.dart';
 import '../../services/firestore_write.dart';
+import '../../services/location_service.dart';
 import '../../utils/format_rupiah.dart';
 import '../../widgets/error_snack_bar.dart';
 import '../../widgets/fade_slide_in.dart';
@@ -36,6 +38,9 @@ class CartScreen extends StatefulWidget {
 // Menunggu konfirmasi server tanpa mengizinkan pesanan yang sama dikirim dua kali.
 class _CartScreenState extends State<CartScreen> {
   bool _waitingForServer = false;
+  bool _isLoadingDeliveryLocation = false;
+  GeoPoint? _deliveryLocation;
+  String? _deliveryLocationError;
   Timer? _pendingNoticeTimer;
 
   @override
@@ -70,8 +75,40 @@ class _CartScreenState extends State<CartScreen> {
     });
   }
 
+  // Mengambil titik GPS terbaru sebagai tujuan tetap untuk pesanan ini.
+  Future<void> _captureDeliveryLocation() async {
+    if (_isLoadingDeliveryLocation || widget.cart.isSubmittingOrder) return;
+    setState(() {
+      _isLoadingDeliveryLocation = true;
+      _deliveryLocationError = null;
+    });
+    final result = await widget.services.location.refreshCurrentLocation();
+    if (!mounted) return;
+    setState(() {
+      _isLoadingDeliveryLocation = false;
+      if (result.location == null) {
+        final message = _locationIssueMessage(result.issue);
+        _deliveryLocationError = _deliveryLocation == null
+            ? message
+            : '$message Titik sebelumnya tetap digunakan.';
+      } else {
+        _deliveryLocation = result.location;
+        _deliveryLocationError = null;
+      }
+    });
+  }
+
+  String _locationIssueMessage(LocationIssue? issue) => switch (issue) {
+    LocationIssue.serviceDisabled => 'Aktifkan GPS untuk mengambil lokasi.',
+    LocationIssue.permissionDenied => 'Izin lokasi belum diberikan.',
+    LocationIssue.permissionDeniedForever =>
+      'Izinkan akses lokasi lewat Pengaturan perangkat.',
+    LocationIssue.unavailable || null => 'Lokasi perangkat tidak terbaca.',
+  };
+
   // Menulis pesanan ke Firestore, mengosongkan keranjang, lalu membuka detail pesanan
   Future<void> _submit() async {
+    if (_isLoadingDeliveryLocation) return;
     final cart = widget.cart;
     final restaurant = cart.restaurant;
     if (restaurant == null || cart.isEmpty || !cart.beginOrderSubmission()) {
@@ -85,6 +122,7 @@ class _CartScreenState extends State<CartScreen> {
         customerName: widget.user.displayName,
         restaurant: restaurant,
         cartItems: cart.items,
+        deliveryLocation: _deliveryLocation,
       );
       _pendingNoticeTimer?.cancel();
       cart.finishOrderSubmission(succeeded: true);
@@ -155,6 +193,14 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _DeliveryLocationCard(
+                      location: _deliveryLocation,
+                      isLoading: _isLoadingDeliveryLocation,
+                      isDisabled: cart.isSubmittingOrder,
+                      errorMessage: _deliveryLocationError,
+                      onCapture: _captureDeliveryLocation,
+                    ),
+                    const SizedBox(height: 12),
                     for (final (index, item) in items.indexed) ...[
                       FadeSlideIn(
                         index: index + 1,
@@ -173,11 +219,95 @@ class _CartScreenState extends State<CartScreen> {
                 total: cart.total,
                 isSubmitting: cart.isSubmittingOrder,
                 isWaitingForServer: _waitingForServer,
-                onSubmit: _submit,
+                onSubmit: _isLoadingDeliveryLocation ? null : _submit,
               ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+// Menampilkan dan mengambil titik tujuan yang disalin ke dokumen pesanan.
+class _DeliveryLocationCard extends StatelessWidget {
+  final GeoPoint? location;
+  final bool isLoading;
+  final bool isDisabled;
+  final String? errorMessage;
+  final VoidCallback onCapture;
+
+  const _DeliveryLocationCard({
+    required this.location,
+    required this.isLoading,
+    required this.isDisabled,
+    required this.errorMessage,
+    required this.onCapture,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final coordinateText = location == null
+        ? 'Belum ditentukan. Pesanan tetap bisa dibuat, tetapi jarak di detail '
+              'tidak tersedia.'
+        : 'Lat ${location!.latitude.toStringAsFixed(5)}, '
+              'Lng ${location!.longitude.toStringAsFixed(5)}. '
+              'Titik ini tetap untuk pesanan ini.';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.location_on_outlined, color: scheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Titik pengantaran', style: text.titleSmall),
+                      const SizedBox(height: 4),
+                      Text(
+                        coordinateText,
+                        style: text.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (errorMessage != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          errorMessage!,
+                          style: text.bodySmall?.copyWith(
+                            color: scheme.error,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: isDisabled || isLoading ? null : onCapture,
+              icon: isLoading
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.my_location_rounded),
+              label: Text(
+                location == null ? 'Gunakan lokasi saat ini' : 'Perbarui titik',
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -242,7 +372,7 @@ class _CheckoutPanel extends StatelessWidget {
   final int total;
   final bool isSubmitting;
   final bool isWaitingForServer;
-  final VoidCallback onSubmit;
+  final VoidCallback? onSubmit;
 
   const _CheckoutPanel({
     required this.total,

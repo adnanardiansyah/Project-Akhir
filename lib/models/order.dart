@@ -98,6 +98,7 @@ class FoodOrder {
   final String customerName;
   final String restaurantId;
   final String restaurantName;
+  final GeoPoint? deliveryLocation;
   final List<OrderItem> items;
   final int total;
   final OrderStatus status;
@@ -112,6 +113,7 @@ class FoodOrder {
     required this.customerName,
     required this.restaurantId,
     required this.restaurantName,
+    this.deliveryLocation,
     required this.items,
     required this.total,
     required this.status,
@@ -137,6 +139,9 @@ class FoodOrder {
       customerName: stringOrEmpty(data['customerName']),
       restaurantId: restaurantId,
       restaurantName: stringOrEmpty(data['restaurantName']),
+      deliveryLocation: data['deliveryLocation'] is GeoPoint
+          ? data['deliveryLocation'] as GeoPoint
+          : null,
       items: items.whereType<OrderItem>().toList(),
       total: total,
       status: status,

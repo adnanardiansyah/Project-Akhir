@@ -30,6 +30,12 @@ service cloud.firestore {
         && get(userPath(request.auth.uid)).data.role == 'admin';
     }
 
+    function isCourier() {
+      return signedIn()
+        && exists(userPath(request.auth.uid))
+        && get(userPath(request.auth.uid)).data.role == 'courier';
+    }
+
     function isRestaurantOperator(restaurantId) {
       return signedIn()
         && exists(userPath(request.auth.uid))
@@ -46,8 +52,16 @@ service cloud.firestore {
         || isRestaurantOperator(order.restaurantId);
     }
 
+    function isAssignedCourier(order) {
+      return isCourier()
+        && order.keys().hasAny(['assignedCourierUid'])
+        && order.assignedCourierUid == request.auth.uid;
+    }
+
     function canReadOrder(order) {
-      return isAdmin() || isOrderParticipant(order);
+      return isAdmin()
+        || isOrderParticipant(order)
+        || isAssignedCourier(order);
     }
 
     function changedOnly(fields) {
@@ -97,8 +111,7 @@ service cloud.firestore {
           == get(restaurantPath(request.resource.data.restaurantId)).data.name
         && get(restaurantPath(request.resource.data.restaurantId))
           .data.reviewStatus == 'approved'
-        && (request.resource.data.deliveryLocation == null
-          || request.resource.data.deliveryLocation is latlng)
+        && request.resource.data.deliveryLocation is latlng
         && request.resource.data.items is list
         && request.resource.data.items.size() > 0
         && request.resource.data.items.size() <= 50
@@ -136,6 +149,60 @@ service cloud.firestore {
         && changed.hasAll(['status', 'paymentMethod', 'paidAt']);
     }
 
+    function validCourierAssignment() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let courierUid = request.resource.data.assignedCourierUid;
+      return isAdmin()
+        && resource.data.status == 'paid'
+        && (!resource.data.keys().hasAny(['deliveryStatus'])
+          || resource.data.deliveryStatus == 'assigned')
+        && changed.hasOnly([
+          'assignedCourierUid', 'assignedCourierName',
+          'deliveryStatus', 'assignedAt'
+        ])
+        && changed.hasAll([
+          'assignedCourierUid', 'assignedCourierName',
+          'deliveryStatus', 'assignedAt'
+        ])
+        && courierUid is string
+        && exists(userPath(courierUid))
+        && get(userPath(courierUid)).data.role == 'courier'
+        && request.resource.data.assignedCourierName is string
+        && request.resource.data.deliveryStatus == 'assigned'
+        && request.resource.data.assignedAt == request.time;
+    }
+
+    function validCourierStart() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isAssignedCourier(resource.data)
+        && resource.data.status == 'paid'
+        && resource.data.deliveryStatus == 'assigned'
+        && changed.hasOnly(['deliveryStatus', 'deliveryStartedAt'])
+        && changed.hasAll(['deliveryStatus', 'deliveryStartedAt'])
+        && request.resource.data.deliveryStatus == 'inTransit'
+        && request.resource.data.deliveryStartedAt == request.time;
+    }
+
+    function validCourierLocationUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isAssignedCourier(resource.data)
+        && resource.data.deliveryStatus == 'inTransit'
+        && changed.hasOnly(['courierLocation', 'courierLocationUpdatedAt'])
+        && changed.hasAll(['courierLocation', 'courierLocationUpdatedAt'])
+        && request.resource.data.courierLocation is latlng
+        && request.resource.data.courierLocationUpdatedAt == request.time;
+    }
+
+    function validCourierCompletion() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isAssignedCourier(resource.data)
+        && resource.data.deliveryStatus == 'inTransit'
+        && changed.hasOnly(['deliveryStatus', 'deliveredAt'])
+        && changed.hasAll(['deliveryStatus', 'deliveredAt'])
+        && request.resource.data.deliveryStatus == 'delivered'
+        && request.resource.data.deliveredAt == request.time;
+    }
+
     function canReadOrderId(orderId) {
       return exists(orderPath(orderId))
         && isOrderParticipant(get(orderPath(orderId)).data);
@@ -166,8 +233,8 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get: if signedIn() && request.auth.uid == userId;
-      allow list: if false;
+      allow get: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
       allow create: if signedIn()
         && request.auth.uid == userId
         && validCustomerProfile();
@@ -201,7 +268,11 @@ service cloud.firestore {
       allow create: if validOrderCreate();
       allow update: if canConfirmOrder()
         || canCancelOrder()
-        || canPayOrder();
+        || canPayOrder()
+        || validCourierAssignment()
+        || validCourierStart()
+        || validCourierLocationUpdate()
+        || validCourierCompletion();
       allow delete: if false;
 
       match /messages/{messageId} {

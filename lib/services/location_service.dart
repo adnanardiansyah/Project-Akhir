@@ -28,6 +28,29 @@ class LocationService extends ChangeNotifier {
 
   Future<LocationResult> currentLocation() => _current ??= _fetch();
 
+  // Streaming GPS untuk layar kurir saat aplikasi terbuka.
+  Future<Stream<GeoPoint>> watchPositionStream() async {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      throw StateError('Aktifkan GPS perangkat kurir.');
+    }
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.deniedForever) {
+      throw StateError('Izinkan lokasi aplikasi lewat Pengaturan.');
+    }
+    if (permission == LocationPermission.denied) {
+      throw StateError('Izinkan akses lokasi untuk mulai mengantar.');
+    }
+    return Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
+      ),
+    ).map((position) => GeoPoint(position.latitude, position.longitude));
+  }
+
   // Ambil GPS terbaru; semua label jarak menghitung ulang setelah hasil tersedia.
   Future<LocationResult> refreshCurrentLocation() {
     final inProgress = _refreshing;
@@ -39,9 +62,7 @@ class LocationService extends ChangeNotifier {
     return _finishRefresh(pending);
   }
 
-  Future<LocationResult> _finishRefresh(
-    Future<LocationResult> pending,
-  ) async {
+  Future<LocationResult> _finishRefresh(Future<LocationResult> pending) async {
     final result = await pending;
     if (identical(_current, pending)) notifyListeners();
     if (identical(_refreshing, pending)) _refreshing = null;

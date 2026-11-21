@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../models/app_user.dart';
 import '../models/order.dart';
 import '../models/restaurant.dart';
 import 'order_service.dart';
@@ -16,14 +17,20 @@ class AdminService {
   CollectionReference<Map<String, dynamic>> get _orders =>
       _firestore.collection('orders');
 
+  CollectionReference<Map<String, dynamic>> get _users =>
+      _firestore.collection('users');
+
   // Admin melihat semua resto, termasuk yang belum disetujui.
   Stream<List<Restaurant>> watchRestaurants() {
-    return _restaurants.orderBy('name').snapshots().map(
-      (snapshot) => snapshot.docs
-          .map((doc) => Restaurant.fromMap(doc.id, doc.data()))
-          .whereType<Restaurant>()
-          .toList(),
-    );
+    return _restaurants
+        .orderBy('name')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => Restaurant.fromMap(doc.id, doc.data()))
+              .whereType<Restaurant>()
+              .toList(),
+        );
   }
 
   // Admin memantau semua pesanan untuk ringkasan status dan daftar terbaru.
@@ -35,6 +42,19 @@ class AdminService {
             .whereType<FoodOrder>(),
       ),
     );
+  }
+
+  // Daftar akun kurir yang dapat dipilih admin saat menugaskan pesanan.
+  Stream<List<AppUser>> watchCouriers() {
+    return _users
+        .where('role', isEqualTo: 'courier')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => AppUser.fromMap(doc.id, doc.data()))
+              .whereType<AppUser>()
+              .toList(),
+        );
   }
 
   // Menyimpan keputusan admin dan jejak akun/waktu peninjauan.

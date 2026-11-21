@@ -90,17 +90,24 @@ class _AdminOverviewTabState extends State<_AdminOverviewTab> {
             final restaurants = restaurantSnapshot.data ?? const [];
             final orders = orderSnapshot.data ?? const [];
             final pendingRestaurants = restaurants
-                .where((restaurant) =>
-                    restaurant.reviewStatus == RestaurantReviewStatus.pending)
+                .where(
+                  (restaurant) =>
+                      restaurant.reviewStatus == RestaurantReviewStatus.pending,
+                )
                 .length;
             final approvedRestaurants = restaurants
-                .where((restaurant) =>
-                    restaurant.reviewStatus == RestaurantReviewStatus.approved)
+                .where(
+                  (restaurant) =>
+                      restaurant.reviewStatus ==
+                      RestaurantReviewStatus.approved,
+                )
                 .length;
             final activeOrders = orders
-                .where((order) =>
-                    order.status == OrderStatus.pending ||
-                    order.status == OrderStatus.confirmed)
+                .where(
+                  (order) =>
+                      order.status == OrderStatus.pending ||
+                      order.status == OrderStatus.confirmed,
+                )
                 .length;
             final paidOrders = orders
                 .where((order) => order.status == OrderStatus.paid)
@@ -116,7 +123,10 @@ class _AdminOverviewTabState extends State<_AdminOverviewTab> {
                   icon: Icons.admin_panel_settings_rounded,
                 ),
                 const SizedBox(height: 20),
-                Text('Ringkasan', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Ringkasan',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 12),
                 GridView.count(
                   crossAxisCount: 2,
@@ -165,7 +175,11 @@ class _AdminOverviewTabState extends State<_AdminOverviewTab> {
                   )
                 else
                   for (final order in orders.take(5))
-                    _AdminOrderCard(order: order),
+                    _AdminOrderCard(
+                      order: order,
+                      services: widget.services,
+                      allowCourierAssignment: false,
+                    ),
               ],
             );
           },
@@ -291,10 +305,8 @@ class _RestaurantReviewTabState extends State<_RestaurantReviewTab> {
     if (_updatingRestaurantId != null) return;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => _ReviewConfirmationDialog(
-        restaurant: restaurant,
-        nextStatus: status,
-      ),
+      builder: (context) =>
+          _ReviewConfirmationDialog(restaurant: restaurant, nextStatus: status),
     );
     if (confirmed != true || !mounted) return;
     setState(() => _updatingRestaurantId = restaurant.id);
@@ -335,18 +347,23 @@ class _RestaurantReviewTabState extends State<_RestaurantReviewTab> {
         final allRestaurants = snapshot.data ?? const [];
         final filtered = allRestaurants.where((restaurant) {
           final query = _query.trim().toLowerCase();
-          final matchesQuery = query.isEmpty ||
+          final matchesQuery =
+              query.isEmpty ||
               restaurant.name.toLowerCase().contains(query) ||
               restaurant.address.toLowerCase().contains(query);
           final matchesStatus =
-              _filter.status == null || restaurant.reviewStatus == _filter.status;
+              _filter.status == null ||
+              restaurant.reviewStatus == _filter.status;
           return matchesQuery && matchesStatus;
         }).toList();
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
           children: [
-            Text('Tinjau restoran', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Tinjau restoran',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 4),
             Text(
               'Resto yang belum disetujui tidak muncul di katalog pemesan.',
@@ -528,8 +545,8 @@ class _RestaurantReviewCard extends StatelessWidget {
     return switch (status) {
       RestaurantReviewStatus.pending => [approve, reject],
       RestaurantReviewStatus.approved => [suspend, reject],
-      RestaurantReviewStatus.rejected || RestaurantReviewStatus.suspended =>
-        [approve],
+      RestaurantReviewStatus.rejected ||
+      RestaurantReviewStatus.suspended => [approve],
     };
   }
 }
@@ -655,6 +672,7 @@ class _OrderMonitoringTab extends StatefulWidget {
 
 class _OrderMonitoringTabState extends State<_OrderMonitoringTab> {
   late final _orders = widget.services.admin.watchOrders();
+  late final _couriers = widget.services.admin.watchCouriers();
   OrderStatus? _status;
 
   @override
@@ -668,66 +686,186 @@ class _OrderMonitoringTabState extends State<_OrderMonitoringTab> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        final orders = snapshot.data ?? const <FoodOrder>[];
-        final visibleOrders = _status == null
-            ? orders
-            : orders.where((order) => order.status == _status).toList();
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          children: [
-            Text('Pantau pesanan', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 4),
-            Text(
-              'Status dan total diperbarui langsung dari Firestore.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  ChoiceChip(
-                    label: const Text('Semua'),
-                    selected: _status == null,
-                    onSelected: (_) => setState(() => _status = null),
+        return StreamBuilder<List<AppUser>>(
+          stream: _couriers,
+          builder: (context, courierSnapshot) {
+            final orders = snapshot.data ?? const <FoodOrder>[];
+            final visibleOrders = _status == null
+                ? orders
+                : orders.where((order) => order.status == _status).toList();
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              children: [
+                Text(
+                  'Pantau pesanan',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Status dan pengantaran diperbarui langsung dari Firestore.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                  const SizedBox(width: 8),
-                  for (final status in OrderStatus.values) ...[
-                    ChoiceChip(
-                      label: Text(status.label),
-                      selected: _status == status,
-                      onSelected: (_) => setState(() => _status = status),
+                ),
+                const SizedBox(height: 12),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Semua'),
+                        selected: _status == null,
+                        onSelected: (_) => setState(() => _status = null),
+                      ),
+                      const SizedBox(width: 8),
+                      for (final status in OrderStatus.values) ...[
+                        ChoiceChip(
+                          label: Text(status.label),
+                          selected: _status == status,
+                          onSelected: (_) => setState(() => _status = status),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (courierSnapshot.hasError)
+                  const _InlineEmpty(
+                    icon: Icons.warning_amber_rounded,
+                    message:
+                        'Daftar kurir gagal dimuat. Periksa Firestore Rules.',
+                  )
+                else if (courierSnapshot.connectionState ==
+                        ConnectionState.waiting &&
+                    visibleOrders.any(
+                      (order) =>
+                          order.status == OrderStatus.paid &&
+                          order.deliveryStatus == null,
+                    ))
+                  const LinearProgressIndicator(),
+                if (visibleOrders.isEmpty)
+                  const _InlineEmpty(
+                    icon: Icons.receipt_long_outlined,
+                    message: 'Tidak ada pesanan untuk status ini.',
+                  )
+                else
+                  for (final order in visibleOrders)
+                    _AdminOrderCard(
+                      order: order,
+                      couriers: courierSnapshot.data ?? const <AppUser>[],
+                      services: widget.services,
+                      couriersLoaded:
+                          !courierSnapshot.hasError &&
+                          courierSnapshot.connectionState !=
+                              ConnectionState.waiting,
                     ),
-                    const SizedBox(width: 8),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (visibleOrders.isEmpty)
-              const _InlineEmpty(
-                icon: Icons.receipt_long_outlined,
-                message: 'Tidak ada pesanan untuk status ini.',
-              )
-            else
-              for (final order in visibleOrders)
-                _AdminOrderCard(order: order),
-          ],
+              ],
+            );
+          },
         );
       },
     );
   }
 }
 
-class _AdminOrderCard extends StatelessWidget {
+class _AdminOrderCard extends StatefulWidget {
   final FoodOrder order;
+  final List<AppUser> couriers;
+  final AppServices services;
+  final bool couriersLoaded;
+  final bool allowCourierAssignment;
 
-  const _AdminOrderCard({required this.order});
+  const _AdminOrderCard({
+    required this.order,
+    this.couriers = const <AppUser>[],
+    required this.services,
+    this.couriersLoaded = false,
+    this.allowCourierAssignment = true,
+  });
+
+  @override
+  State<_AdminOrderCard> createState() => _AdminOrderCardState();
+}
+
+class _AdminOrderCardState extends State<_AdminOrderCard> {
+  bool _assigning = false;
+
+  Future<void> _chooseCourier() async {
+    final order = widget.order;
+    if (widget.couriers.isEmpty) {
+      showErrorSnackBar(
+        context,
+        widget.couriersLoaded
+            ? 'Belum ada akun kurir. Buat akun Firebase Auth dan profil role courier.'
+            : 'Daftar kurir belum selesai dimuat.',
+      );
+      return;
+    }
+    final courier = await showDialog<AppUser>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tugaskan kurir'),
+        content: SizedBox(
+          width: 360,
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              for (final candidate in widget.couriers)
+                ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.delivery_dining_rounded),
+                  ),
+                  title: Text(candidate.displayName),
+                  subtitle: Text(
+                    candidate.uid == order.assignedCourierUid
+                        ? 'Kurir saat ini'
+                        : 'Siap menerima tugas',
+                  ),
+                  onTap: () => Navigator.of(context).pop(candidate),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Batal'),
+          ),
+        ],
+      ),
+    );
+    if (courier == null || !mounted) return;
+
+    setState(() => _assigning = true);
+    try {
+      await widget.services.orders.assignCourier(
+        orderId: order.id,
+        courierUid: courier.uid,
+        courierName: courier.displayName,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pesanan ditugaskan ke ${courier.displayName}.'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        showErrorSnackBar(
+          context,
+          'Kurir gagal ditugaskan. Pastikan pesanan sudah dibayar dan Rules terbaru aktif.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _assigning = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final order = widget.order;
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final date = order.createdAt;
@@ -735,55 +873,88 @@ class _AdminOrderCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            RestaurantAvatar(
-              restaurantId: order.restaurantId,
-              size: 44,
-              heroEnabled: false,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(order.restaurantName, style: text.titleSmall),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Pemesan: ${order.customerName}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: text.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  if (date != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      formatDateTime(date),
-                      style: text.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    runSpacing: 6,
+            Row(
+              children: [
+                RestaurantAvatar(
+                  restaurantId: order.restaurantId,
+                  size: 44,
+                  heroEnabled: false,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      OrderStatusChip(status: order.status),
+                      Text(order.restaurantName, style: text.titleSmall),
+                      const SizedBox(height: 2),
                       Text(
-                        formatRupiah(order.total),
-                        style: text.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
+                        'Pemesan: ${order.customerName}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
                         ),
+                      ),
+                      if (date != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          formatDateTime(date),
+                          style: text.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: [
+                          OrderStatusChip(status: order.status),
+                          Text(
+                            formatRupiah(order.total),
+                            style: text.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+            if (order.assignedCourierName != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                '${order.deliveryStatus?.label ?? 'Kurir ditugaskan'}: '
+                '${order.assignedCourierName}',
+                style: text.bodySmall?.copyWith(color: scheme.primary),
+              ),
+            ],
+            if (widget.allowCourierAssignment &&
+                order.status == OrderStatus.paid &&
+                order.deliveryStatus != DeliveryStatus.inTransit &&
+                order.deliveryStatus != DeliveryStatus.delivered) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _assigning ? null : _chooseCourier,
+                icon: _assigning
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.delivery_dining_rounded),
+                label: Text(
+                  order.assignedCourierUid == null
+                      ? 'Tugaskan kurir'
+                      : 'Ganti kurir',
+                ),
+              ),
+            ],
           ],
         ),
       ),

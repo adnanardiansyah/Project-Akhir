@@ -1,5 +1,5 @@
 // Peran pengguna di aplikasi
-enum UserRole { customer, restaurant, admin }
+enum UserRole { customer, restaurant, courier, admin }
 
 // Profil pengguna dari dokumen users/{uid}
 class AppUser {
@@ -20,6 +20,7 @@ class AppUser {
     final role = switch (data['role']) {
       'customer' => UserRole.customer,
       'restaurant' => UserRole.restaurant,
+      'courier' => UserRole.courier,
       'admin' => UserRole.admin,
       _ => null,
     };

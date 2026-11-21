@@ -9,6 +9,7 @@ import 'models/app_user.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/customer/restaurant_list_screen.dart';
+import 'screens/courier/courier_dashboard_screen.dart';
 import 'screens/restaurant/incoming_orders_screen.dart';
 import 'services/app_services.dart';
 import 'services/auth_service.dart';
@@ -187,6 +188,11 @@ class _ProfileGateState extends State<_ProfileGate> {
       ),
       UserRole.restaurant => IncomingOrdersScreen(
         key: const ValueKey('restaurant-home'),
+        user: appUser,
+        services: widget.services,
+      ),
+      UserRole.courier => CourierDashboardScreen(
+        key: const ValueKey('courier-home'),
         user: appUser,
         services: widget.services,
       ),

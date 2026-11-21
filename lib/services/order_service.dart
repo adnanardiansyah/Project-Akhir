@@ -20,7 +20,7 @@ class OrderService {
     required String customerName,
     required Restaurant restaurant,
     required List<CartItem> cartItems,
-    required GeoPoint? deliveryLocation,
+    required GeoPoint deliveryLocation,
   }) async {
     if (cartItems.isEmpty) {
       throw ArgumentError('Keranjang kosong');
@@ -64,6 +64,65 @@ class OrderService {
     });
   }
 
+  // Pesanan dibayar hanya bisa ditugaskan oleh admin.
+  Future<void> assignCourier({
+    required String orderId,
+    required String courierUid,
+    required String courierName,
+  }) {
+    return _orders.doc(orderId).update({
+      'assignedCourierUid': courierUid,
+      'assignedCourierName': courierName,
+      'deliveryStatus': DeliveryStatus.assigned.name,
+      'assignedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Kurir memulai pengantaran setelah admin menugaskan pesanan.
+  Future<void> startCourierDelivery(String orderId, String courierUid) {
+    final ref = _orders.doc(orderId);
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(ref);
+      final data = snapshot.data();
+      if (data == null ||
+          data['assignedCourierUid'] != courierUid ||
+          data['deliveryStatus'] != DeliveryStatus.assigned.name ||
+          data['status'] != OrderStatus.paid.name) {
+        throw StateError('Pesanan ini belum siap untuk diantar.');
+      }
+      transaction.update(ref, {
+        'deliveryStatus': DeliveryStatus.inTransit.name,
+        'deliveryStartedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  // Lokasi terbaru hanya dikirim oleh kurir yang sedang ditugaskan.
+  Future<void> updateCourierLocation(String orderId, GeoPoint location) {
+    return _orders.doc(orderId).update({
+      'courierLocation': location,
+      'courierLocationUpdatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Kurir menandai pengantaran selesai.
+  Future<void> completeCourierDelivery(String orderId, String courierUid) {
+    final ref = _orders.doc(orderId);
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(ref);
+      final data = snapshot.data();
+      if (data == null ||
+          data['assignedCourierUid'] != courierUid ||
+          data['deliveryStatus'] != DeliveryStatus.inTransit.name) {
+        throw StateError('Pengantaran ini tidak sedang berjalan.');
+      }
+      transaction.update(ref, {
+        'deliveryStatus': DeliveryStatus.delivered.name,
+        'deliveredAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
   // Transaksi bersama: baca status terkini, cek perpindahan, lalu tulis perubahan sekaligus
   Future<void> _transition(
     String orderId,
@@ -96,6 +155,10 @@ class OrderService {
   // Aliran pesanan untuk satu resto, terbaru di atas
   Stream<List<FoodOrder>> watchRestaurantOrders(String restaurantId) =>
       _watchOrdersWhere('restaurantId', restaurantId);
+
+  // Kurir hanya menerima pesanan yang ditugaskan ke UID miliknya.
+  Stream<List<FoodOrder>> watchCourierOrders(String courierUid) =>
+      _watchOrdersWhere('assignedCourierUid', courierUid);
 
   // Pesanan dengan satu field sama dengan nilai; diurutkan di aplikasi agar tanpa indeks gabungan
   Stream<List<FoodOrder>> _watchOrdersWhere(String field, String value) {

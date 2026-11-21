@@ -12,6 +12,7 @@ import '../../widgets/fade_slide_in.dart';
 import '../../widgets/loading_button.dart';
 import '../../widgets/order_progress.dart';
 import '../../widgets/order_status_chip.dart';
+import '../../widgets/courier_tracking_map.dart';
 import '../../widgets/restaurant_avatar.dart';
 import '../../widgets/route_distance_label.dart';
 import '../../widgets/state_message.dart';
@@ -214,11 +215,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
           ),
         ),
+        if (_isCustomer && order.deliveryStatus != null) ...[
+          const SizedBox(height: 16),
+          FadeSlideIn(index: 2, child: _CourierTrackingPanel(order: order)),
+        ],
         const SizedBox(height: 16),
-        FadeSlideIn(index: 2, child: _OrderItemsCard(order: order)),
+        FadeSlideIn(index: 3, child: _OrderItemsCard(order: order)),
         const SizedBox(height: 16),
         FadeSlideIn(
-          index: 3,
+          index: 4,
           child: _OrderActions(
             status: order.status,
             isCustomer: _isCustomer,
@@ -228,7 +233,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
         ),
         FadeSlideIn(
-          index: 4,
+          index: 5,
           child: FilledButton.tonalIcon(
             onPressed: () => _openChat(order),
             icon: const Icon(Icons.chat_bubble_outline_rounded),
@@ -238,6 +243,80 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CourierTrackingPanel extends StatelessWidget {
+  final FoodOrder order;
+
+  const _CourierTrackingPanel({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final deliveryStatus = order.deliveryStatus!;
+    final isMoving = deliveryStatus == DeliveryStatus.inTransit;
+    final hasMap =
+        isMoving &&
+        order.courierLocation != null &&
+        order.deliveryLocation != null;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.delivery_dining_rounded, color: scheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(deliveryStatus.label, style: text.titleMedium),
+                ),
+              ],
+            ),
+            if (order.assignedCourierName case final courierName?) ...[
+              const SizedBox(height: 4),
+              Text('Kurir: $courierName', style: text.bodyMedium),
+            ],
+            const SizedBox(height: 10),
+            if (hasMap) ...[
+              CourierTrackingMap(
+                courierLocation: order.courierLocation,
+                destination: order.deliveryLocation,
+              ),
+              if (order.courierLocationUpdatedAt case final updatedAt?)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'Posisi terakhir diperbarui ${formatDateTime(updatedAt)}',
+                    style: text.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+            ] else if (deliveryStatus == DeliveryStatus.assigned) ...[
+              Text(
+                'Kurir sudah ditugaskan. Peta akan menampilkan posisi saat kurir memulai pengantaran.',
+                style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ] else if (deliveryStatus == DeliveryStatus.inTransit) ...[
+              Text(
+                'Menunggu lokasi GPS kurir. Peta akan diperbarui saat posisi diterima.',
+                style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ] else ...[
+              Text(
+                'Kurir telah menandai pengantaran selesai.',
+                style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

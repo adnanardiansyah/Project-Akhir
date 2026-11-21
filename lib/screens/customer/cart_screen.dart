@@ -109,6 +109,13 @@ class _CartScreenState extends State<CartScreen> {
   // Menulis pesanan ke Firestore, mengosongkan keranjang, lalu membuka detail pesanan
   Future<void> _submit() async {
     if (_isLoadingDeliveryLocation) return;
+    if (_deliveryLocation == null) {
+      showErrorSnackBar(
+        context,
+        'Tentukan titik pengantaran sebelum membuat pesanan.',
+      );
+      return;
+    }
     final cart = widget.cart;
     final restaurant = cart.restaurant;
     if (restaurant == null || cart.isEmpty || !cart.beginOrderSubmission()) {
@@ -122,7 +129,7 @@ class _CartScreenState extends State<CartScreen> {
         customerName: widget.user.displayName,
         restaurant: restaurant,
         cartItems: cart.items,
-        deliveryLocation: _deliveryLocation,
+        deliveryLocation: _deliveryLocation!,
       );
       _pendingNoticeTimer?.cancel();
       cart.finishOrderSubmission(succeeded: true);
@@ -250,8 +257,7 @@ class _DeliveryLocationCard extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final coordinateText = location == null
-        ? 'Belum ditentukan. Pesanan tetap bisa dibuat, tetapi jarak di detail '
-              'tidak tersedia.'
+        ? 'Wajib ditentukan agar kurir dapat menemukan titik pengantaran.'
         : 'Lat ${location!.latitude.toStringAsFixed(5)}, '
               'Lng ${location!.longitude.toStringAsFixed(5)}. '
               'Titik ini tetap untuk pesanan ini.';
@@ -283,9 +289,7 @@ class _DeliveryLocationCard extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(
                           errorMessage!,
-                          style: text.bodySmall?.copyWith(
-                            color: scheme.error,
-                          ),
+                          style: text.bodySmall?.copyWith(color: scheme.error),
                         ),
                       ],
                     ],

@@ -6,6 +6,17 @@ import 'field_parsers.dart';
 // Status pesanan sesuai usulan U5
 enum OrderStatus { pending, confirmed, paid, cancelled }
 
+// Tahap pengantaran setelah pesanan dibayar.
+enum DeliveryStatus { assigned, inTransit, delivered }
+
+extension DeliveryStatusLabel on DeliveryStatus {
+  String get label => switch (this) {
+    DeliveryStatus.assigned => 'Kurir ditugaskan',
+    DeliveryStatus.inTransit => 'Kurir sedang mengantar',
+    DeliveryStatus.delivered => 'Pesanan sudah diantar',
+  };
+}
+
 // Label status dalam bahasa Indonesia untuk tampilan
 extension OrderStatusLabel on OrderStatus {
   String get label => switch (this) {
@@ -106,6 +117,13 @@ class FoodOrder {
   // Null sesaat setelah dibuat, sebelum waktu server tercatat
   final DateTime? createdAt;
   final DateTime? paidAt;
+  final String? assignedCourierUid;
+  final String? assignedCourierName;
+  final DeliveryStatus? deliveryStatus;
+  final GeoPoint? courierLocation;
+  final DateTime? courierLocationUpdatedAt;
+  final DateTime? deliveryStartedAt;
+  final DateTime? deliveredAt;
 
   const FoodOrder({
     required this.id,
@@ -120,6 +138,13 @@ class FoodOrder {
     this.paymentMethod,
     this.createdAt,
     this.paidAt,
+    this.assignedCourierUid,
+    this.assignedCourierName,
+    this.deliveryStatus,
+    this.courierLocation,
+    this.courierLocationUpdatedAt,
+    this.deliveryStartedAt,
+    this.deliveredAt,
   });
 
   // Membaca pesanan dari Firestore; null bila field inti tidak valid
@@ -148,6 +173,15 @@ class FoodOrder {
       paymentMethod: stringOrNull(data['paymentMethod']),
       createdAt: _dateOrNull(data['createdAt']),
       paidAt: _dateOrNull(data['paidAt']),
+      assignedCourierUid: stringOrNull(data['assignedCourierUid']),
+      assignedCourierName: stringOrNull(data['assignedCourierName']),
+      deliveryStatus: DeliveryStatus.values.asNameMap()[data['deliveryStatus']],
+      courierLocation: data['courierLocation'] is GeoPoint
+          ? data['courierLocation'] as GeoPoint
+          : null,
+      courierLocationUpdatedAt: _dateOrNull(data['courierLocationUpdatedAt']),
+      deliveryStartedAt: _dateOrNull(data['deliveryStartedAt']),
+      deliveredAt: _dateOrNull(data['deliveredAt']),
     );
   }
 

@@ -172,7 +172,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             // Jarak rute hanya bermakna dari perangkat pemesan (FR-5)
             distance: _isCustomer
                 ? RouteDistanceLabel(
+                    key: ValueKey('${order.id}:${order.restaurantId}'),
                     services: widget.services,
+                    destinationKey: order.restaurantId,
                     loadDestination: () async =>
                         (await widget.services.restaurants.fetchRestaurant(
                           order.restaurantId,

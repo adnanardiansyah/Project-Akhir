@@ -1,34 +1,78 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 
 // Batas tunggu mendapatkan posisi GPS
 const Duration _positionTimeout = Duration(seconds: 15);
 
-// Lokasi perangkat pemesan; null bila layanan lokasi mati, izin ditolak, atau gagal
-class LocationService {
-  // Posisi diminta sekali per sesi agar izin dan GPS tidak dipanggil berulang
-  Future<GeoPoint?>? _current;
+enum LocationIssue {
+  serviceDisabled,
+  permissionDenied,
+  permissionDeniedForever,
+  unavailable,
+}
 
-  // Lokasi saat ini; kegagalan tidak disimpan agar bisa dicoba lagi
-  Future<GeoPoint?> currentLocation() {
-    final pending = _current ??= _fetch();
-    pending.then((value) {
-      if (value == null) _current = null;
-    });
-    return pending;
+class LocationResult {
+  final GeoPoint? location;
+  final LocationIssue? issue;
+
+  const LocationResult.success(this.location) : issue = null;
+  const LocationResult.failure(this.issue) : location = null;
+}
+
+// Lokasi perangkat pemesan, dibagikan ke semua label jarak pada sesi akun.
+class LocationService extends ChangeNotifier {
+  // Satu permintaan lokasi dipakai bersama oleh semua label jarak.
+  Future<LocationResult>? _current;
+  Future<LocationResult>? _refreshing;
+
+  Future<LocationResult> currentLocation() => _current ??= _fetch();
+
+  // Ambil GPS terbaru; semua label jarak menghitung ulang setelah hasil tersedia.
+  Future<LocationResult> refreshCurrentLocation() {
+    final inProgress = _refreshing;
+    if (inProgress != null) return inProgress;
+
+    final pending = _fetch();
+    _refreshing = pending;
+    _current = pending;
+    return _finishRefresh(pending);
   }
 
-  // Memeriksa layanan dan izin lokasi, lalu mengambil posisi
-  Future<GeoPoint?> _fetch() async {
+  Future<LocationResult> _finishRefresh(
+    Future<LocationResult> pending,
+  ) async {
+    final result = await pending;
+    if (identical(_current, pending)) notifyListeners();
+    if (identical(_refreshing, pending)) _refreshing = null;
+    return result;
+  }
+
+  // Lokasi perangkat tidak dibawa ke akun berikutnya pada perangkat yang sama.
+  void clearCachedLocation() {
+    if (_current == null && _refreshing == null) return;
+    _current = null;
+    _refreshing = null;
+    notifyListeners();
+  }
+
+  // Memeriksa layanan dan izin lokasi, lalu mengambil posisi.
+  Future<LocationResult> _fetch() async {
     try {
-      if (!await Geolocator.isLocationServiceEnabled()) return null;
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        return const LocationResult.failure(LocationIssue.serviceDisabled);
+      }
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        return null;
+      if (permission == LocationPermission.deniedForever) {
+        return const LocationResult.failure(
+          LocationIssue.permissionDeniedForever,
+        );
+      }
+      if (permission == LocationPermission.denied) {
+        return const LocationResult.failure(LocationIssue.permissionDenied);
       }
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
@@ -36,9 +80,11 @@ class LocationService {
           timeLimit: _positionTimeout,
         ),
       );
-      return GeoPoint(position.latitude, position.longitude);
+      return LocationResult.success(
+        GeoPoint(position.latitude, position.longitude),
+      );
     } catch (_) {
-      return null;
+      return const LocationResult.failure(LocationIssue.unavailable);
     }
   }
 }

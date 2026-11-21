@@ -75,6 +75,7 @@ class _RoleRouterState extends State<_RoleRouter> {
     if (_activeUid == nextUid) return;
     if (_activeUid != null) {
       widget.services.routeDistance.clearPersonalApiKey();
+      widget.services.location.clearCachedLocation();
     }
     _activeUid = nextUid;
   }

@@ -60,6 +60,7 @@ class RestaurantListScreen extends StatelessWidget {
             bottomPadding: 120,
             header: _Greeting(name: user.displayName),
             itemBuilder: (context, restaurant) => _RestaurantCard(
+              key: ValueKey(restaurant.id),
               restaurant: restaurant,
               services: services,
               onTap: () => _push(
@@ -123,6 +124,7 @@ class _RestaurantCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _RestaurantCard({
+    super.key,
     required this.restaurant,
     required this.services,
     required this.onTap,
@@ -169,6 +171,9 @@ class _RestaurantCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 RouteDistanceLabel(
                   services: services,
+                  destinationKey:
+                      '${restaurant.id}:${restaurant.location.latitude},'
+                      '${restaurant.location.longitude}',
                   loadDestination: () async => restaurant.location,
                 ),
               ],

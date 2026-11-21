@@ -108,7 +108,7 @@ Alasan `items` menyalin nama dan harga: harga di pesanan tidak berubah kalau men
 4. **Chat (M2):** `chat_service` menulis ke `orders/{id}/messages`; kedua sisi mendengarkan koleksi yang sama diurutkan `createdAt`, sehingga pesan muncul tanpa refresh.
 5. **Konfirmasi dan batal:** resto mengubah `status` ke `confirmed` atau `cancelled`; pemesan hanya boleh membatalkan sebelum `paid`.
 6. **Pembayaran simulasi (M3):** pemesan memilih metode, `status` menjadi `paid`, `paymentMethod` dan `paidAt` terisi. Tidak ada uang sungguhan.
-7. **Jarak rute (M4):** `location_service` mengambil lokasi perangkat, `route_distance_service` memanggil OpenRouteService, hasil meter diubah ke km oleh `format_distance`.
+7. **Jarak rute (M4):** `location_service` membagikan lokasi GPS terkini ke label di daftar resto dan detail pesanan. Tombol perbarui mengambil GPS baru dan semua label yang sedang tampil menghitung ulang. `route_distance_service` memanggil OpenRouteService; hasil meter diubah ke km oleh `format_distance`.
 
 ## 6. Integrasi OpenRouteService
 
@@ -127,13 +127,15 @@ Profil yang dipakai: `driving-car` (usulan).
 
 Key tidak disimpan di repositori, konfigurasi build, atau penyimpanan perangkat. Pengguna memasukkannya lewat tombol kunci di beranda pemesan; key hilang saat aplikasi ditutup. Untuk aplikasi produksi yang memakai satu key milik pengelola, diperlukan proxy di server, bukan key klien.
 
-Kegagalan (tanpa internet, izin lokasi ditolak, 403, 429, rute tidak ditemukan): tampil "jarak tidak tersedia" (usulan U6), aplikasi tetap jalan.
+GPS disimpan di memori selama sesi akun dan dihapus saat akun berganti atau keluar. Jarak memakai GPS perangkat pemesan saat itu; koordinat pemesan tidak disimpan di dokumen pesanan.
+
+Jika GPS mati atau izinnya ditolak, label memberi petunjuk untuk mengaktifkan GPS atau izin. Jika koordinat resto belum tersedia, label menyebutkannya. Jika rute gagal karena key, kuota, jaringan, atau rute tidak ditemukan, label menyarankan memeriksa key dan koneksi. Tidak ada cadangan jarak garis lurus; fitur lain tetap dapat dipakai.
 
 ## 7. Keamanan data (aturan Firestore)
 
 Prinsip yang ditulis di `firestore.rules`:
 - Pengguna hanya membaca dan mengubah dokumen `users` miliknya; **tidak boleh mengubah `role` menjadi `restaurant`** (U4).
-- `restaurants` dan `menuItems`: semua pengguna yang login boleh membaca; tulis ditutup dari aplikasi (data contoh diisi lewat Console).
+- `restaurants` dan `menuItems`: semua pengguna yang login boleh membaca; tulis ditutup dari aplikasi. Data usaha nyata bersumber publik dan dimasukkan lewat Console; akun operator aplikasi tidak menyatakan hubungan dengan pemilik usaha.
 - `orders`: pemesan membaca dan membuat pesanan miliknya; resto hanya membaca dan mengubah pesanan dengan `restaurantId` miliknya.
 - `messages`: hanya pemesan dan resto pada pesanan itu yang boleh membaca dan menulis; `senderUid` harus sama dengan pengguna yang login.
 

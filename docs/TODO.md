@@ -35,12 +35,12 @@ Mengikuti `PRD.md` dan `ARSITEKTUR.md`. Jadwal di bawah adalah **usulan** (hari 
 - Commit: `chore: init flutter project and firebase config`
 
 ### L1 — Login dan peran (19 Nov) — FR-7
-- Pekerjaan: daftar pemesan, login, logout, pengalihan layar sesuai `role`; akun resto contoh dibuat lewat Console.
+- Pekerjaan: daftar pemesan, login, logout, pengalihan layar sesuai `role`; akun operator restoran proyek dibuat lewat Console.
 - Tes: daftar lalu login lalu logout; akun resto masuk ke layar resto; tes unit validasi form.
 - Commit: `feat: add auth with customer and restaurant roles`
 
 ### L2 — Resto dan menu (20 Nov) — M1, FR-1
-- Pekerjaan: isi 2–3 resto dan menu contoh di Firestore; layar daftar resto dan layar menu dengan harga format rupiah.
+- Pekerjaan: isi 2–3 restoran nyata di Lhokseumawe beserta menu dan harga bersumber publik di Firestore; gunakan `docs/DATA_RESTORAN_LHOKSEUMAWE.md`; layar daftar resto dan layar menu dengan harga format rupiah.
 - Tes: data tampil dari Firestore; ubah satu harga di Console, tampilan ikut berubah; tes unit format rupiah.
 - Commit: `feat: add restaurant list and menu with prices`
 
@@ -85,7 +85,7 @@ Mengikuti `PRD.md` dan `ARSITEKTUR.md`. Jadwal di bawah adalah **usulan** (hari 
 - Commit: `docs: add final report`
 
 ### L11 — Gladi demo (29 Nov) — N4
-- Pekerjaan: pasang aplikasi di perangkat demo, uji di jaringan yang berbeda dari rumah, siapkan hotspot, siapkan dua perangkat (pemesan dan resto), siapkan akun contoh.
+- Pekerjaan: pasang aplikasi di perangkat demo, uji di jaringan yang berbeda dari rumah, siapkan hotspot, siapkan dua perangkat (pemesan dan operator restoran proyek), siapkan akun pengujian.
 - Tes: satu alur penuh dari login sampai `paid` plus jarak rute, tanpa bantuan laptop.
 - Commit: tidak ada (kecuali ada perbaikan: `fix: ...`)
 

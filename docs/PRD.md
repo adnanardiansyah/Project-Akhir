@@ -41,14 +41,14 @@ Catatan dan penugasan dari modul:
 
 ## 4. Keputusan
 
-Sudah disetujui (17 November 2026):
+Sudah disetujui (17 November 2026; K4 diperbarui 20 November 2026):
 
 | ID | Keputusan |
 |---|---|
 | K1 | Database: **Firebase** (Authentication + Cloud Firestore) |
 | K2 | **Satu aplikasi dengan dua peran**: pemesan (customer) dan resto (restaurant) |
 | K3 | Pembayaran: **simulasi** (alur pembayaran tanpa uang sungguhan), kecuali dosen meminta pembayaran sungguhan |
-| K4 | **Banyak resto**: struktur data mendukung banyak resto, demo memakai 2 sampai 3 resto contoh |
+| K4 | **Banyak resto**: struktur data mendukung banyak resto, demo memakai 2 sampai 3 restoran nyata di Lhokseumawe |
 | K5 | Jarak tempuh: **jarak rute jalan** (bukan garis lurus), memakai OpenRouteService |
 
 Usulan, **belum dikonfirmasi** (ubah di sini bila tidak cocok):
@@ -57,10 +57,10 @@ Usulan, **belum dikonfirmasi** (ubah di sini bila tidak cocok):
 |---|---|
 | U1 | Platform target: Android |
 | U2 | Login email dan password (modul tidak menyebut login, tapi dua peran butuh identitas) |
-| U3 | Akun dan data resto serta menu diisi sebagai data contoh lewat Firebase Console; tidak ada layar resto untuk mengelola menu |
+| U3 | Akun operator proyek dan data restoran/menu bersumber publik diatur lewat Firebase Console; tidak ada layar resto untuk mengelola menu; akun operator bukan akun resmi pemilik usaha |
 | U4 | Pemesan hanya bisa mendaftar sebagai pemesan; akun resto dibuat manual |
 | U5 | Status pesanan: `pending`, `confirmed`, `paid`, `cancelled` |
-| U6 | Tidak ada cadangan jarak garis lurus; kalau rute gagal dihitung, tampil pesan "jarak tidak tersedia" |
+| U6 | Tidak ada cadangan jarak garis lurus. Jarak memakai GPS perangkat pemesan saat itu; tombol perbarui mengambil lokasi terbaru. Jika GPS, koordinat resto, key, atau rute bermasalah, tampil petunjuk yang sesuai dan fitur lain tetap dapat dipakai. |
 
 ## 5. Peran dan alur
 

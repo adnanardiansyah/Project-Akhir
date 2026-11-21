@@ -128,6 +128,23 @@ ThemeData _buildTheme(Brightness brightness) {
         ),
       ),
     ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(fieldRadius),
+        ),
+        side: BorderSide(color: scheme.outlineVariant),
+        textStyle: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+      ),
+    ),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+    ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         textStyle: text.labelLarge?.copyWith(fontWeight: FontWeight.w600),

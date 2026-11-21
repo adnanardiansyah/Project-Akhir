@@ -11,6 +11,7 @@ import '../../widgets/restaurant_avatar.dart';
 import '../../widgets/route_api_key_button.dart';
 import '../../widgets/route_distance_label.dart';
 import '../../widgets/stream_list_view.dart';
+import '../../widgets/welcome_banner.dart';
 import 'cart_screen.dart';
 import 'menu_screen.dart';
 import 'my_orders_screen.dart';
@@ -90,7 +91,7 @@ class RestaurantListScreen extends StatelessWidget {
   }
 }
 
-// Sapaan di atas daftar resto
+// Banner sapaan di atas daftar resto.
 class _Greeting extends StatelessWidget {
   final String name;
 
@@ -98,20 +99,13 @@ class _Greeting extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Halo, $name',
-            style: text.titleMedium?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 4),
-          Text('Mau makan apa hari ini?', style: text.headlineMedium),
-        ],
+      child: WelcomeBanner(
+        eyebrow: 'Pesan makanan',
+        title: 'Halo, $name',
+        subtitle: 'Pilih resto lokal dan temukan menu favoritmu.',
+        icon: Icons.ramen_dining_rounded,
       ),
     );
   }

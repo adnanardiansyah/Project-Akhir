@@ -7,6 +7,7 @@ import '../../widgets/logout_button.dart';
 import '../../widgets/order_card.dart';
 import '../../widgets/state_message.dart';
 import '../../widgets/stream_list_view.dart';
+import '../../widgets/welcome_banner.dart';
 import '../shared/order_detail_screen.dart';
 
 // Beranda resto: pesanan masuk untuk resto miliknya saja, realtime
@@ -64,7 +65,7 @@ class IncomingOrdersScreen extends StatelessWidget {
   }
 }
 
-// Nama resto di atas daftar pesanan
+// Banner resto di atas daftar pesanan.
 class _Header extends StatelessWidget {
   final String name;
 
@@ -72,20 +73,13 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Resto',
-            style: text.titleMedium?.copyWith(color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 4),
-          Text(name, style: text.headlineMedium),
-        ],
+      child: WelcomeBanner(
+        eyebrow: 'Panel resto',
+        title: name,
+        subtitle: 'Pantau pesanan dan chat pelanggan di sini.',
+        icon: Icons.storefront_rounded,
       ),
     );
   }

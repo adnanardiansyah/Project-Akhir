@@ -95,6 +95,7 @@ Pesanan bisa dibatalkan (`cancelled`) oleh resto atau pemesan sebelum status `pa
 ## 7. Kebutuhan non-fungsional
 
 - Chat realtime: pesan baru muncul di perangkat lawan bicara tanpa refresh.
+- Penulisan chat dan pesanan menunggu konfirmasi server; setelah 10 detik tanpa konfirmasi, aplikasi memberi tahu pengguna dan mencegah pesanan ganda.
 - Aplikasi tidak menutup sendiri saat internet atau API jarak gagal; tampil pesan yang jelas.
 - API key OpenRouteService tidak masuk ke repositori atau aplikasi bawaan; setiap pengguna memasukkan key miliknya sendiri untuk sesi berjalan.
 - Demo butuh internet (Firebase dan OpenRouteService); siapkan hotspot cadangan.

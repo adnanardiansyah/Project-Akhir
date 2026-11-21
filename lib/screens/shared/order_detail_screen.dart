@@ -84,7 +84,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       if (mounted) {
         showErrorSnackBar(
           context,
-          'Status gagal diubah. Periksa koneksi internet.',
+          'Status gagal diubah. Periksa koneksi atau akses Firestore.',
         );
       }
     } finally {
@@ -144,7 +144,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         key: ValueKey('error'),
         icon: Icons.wifi_off_rounded,
         title: 'Gagal memuat pesanan',
-        message: 'Periksa koneksi internet.',
+        message: 'Periksa koneksi atau akses Firestore.',
       );
     }
     if (snapshot.connectionState == ConnectionState.waiting) {

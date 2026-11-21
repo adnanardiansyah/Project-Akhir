@@ -1,6 +1,5 @@
-// Batas tunggu konfirmasi server; setelahnya Firestore tetap mengirim saat kembali online
-const Duration writeAckTimeout = Duration(seconds: 10);
+// Setelah 10 detik, UI memberi tahu bahwa server belum mengonfirmasi penulisan.
+const Duration writePendingNoticeDelay = Duration(seconds: 10);
 
-// Menunggu tulisan Firestore paling lama writeAckTimeout agar tampilan tidak terkunci saat offline
-Future<void> awaitWrite(Future<void> write) =>
-    write.timeout(writeAckTimeout, onTimeout: () {});
+// Future penulisan hanya selesai setelah server mengonfirmasi atau menolak write.
+Future<void> waitForServerAck(Future<void> write) => write;

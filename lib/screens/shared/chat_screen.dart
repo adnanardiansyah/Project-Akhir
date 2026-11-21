@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/app_user.dart';
 import '../../models/chat_message.dart';
 import '../../services/app_services.dart';
+import '../../services/firestore_write.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format_date_time.dart';
 import '../../widgets/error_snack_bar.dart';
@@ -42,9 +45,12 @@ class _ChatScreenState extends State<ChatScreen> {
       .watchMessages(widget.orderId);
   final _inputController = TextEditingController();
   bool _isSending = false;
+  bool _waitingForServer = false;
+  Timer? _pendingNoticeTimer;
 
   @override
   void dispose() {
+    _pendingNoticeTimer?.cancel();
     _inputController.dispose();
     super.dispose();
   }
@@ -52,7 +58,16 @@ class _ChatScreenState extends State<ChatScreen> {
   // Mengirim teks; isian dikosongkan dulu agar terasa cepat, dikembalikan bila gagal
   Future<void> _send(String text) async {
     if (_isSending || normalizeMessageText(text) == null) return;
-    setState(() => _isSending = true);
+    setState(() {
+      _isSending = true;
+      _waitingForServer = false;
+    });
+    _pendingNoticeTimer?.cancel();
+    _pendingNoticeTimer = Timer(writePendingNoticeDelay, () {
+      if (mounted && _isSending) {
+        setState(() => _waitingForServer = true);
+      }
+    });
     _inputController.clear();
     try {
       await widget.services.chat.sendMessage(
@@ -64,10 +79,19 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) _restoreAndShowError(text, '${e.message}');
     } catch (_) {
       if (mounted) {
-        _restoreAndShowError(text, 'Pesan gagal terkirim. Coba lagi.');
+        _restoreAndShowError(
+          text,
+          'Pesan gagal disimpan. Periksa koneksi dan akses Firestore.',
+        );
       }
     } finally {
-      if (mounted) setState(() => _isSending = false);
+      _pendingNoticeTimer?.cancel();
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+          _waitingForServer = false;
+        });
+      }
     }
   }
 
@@ -107,6 +131,31 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           if (isCustomer) _SuggestionRow(onSelected: _isSending ? null : _send),
+          if (_isSending)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.cloud_sync_outlined,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _waitingForServer
+                          ? 'Pesan belum dikonfirmasi server. Tunggu koneksi; '
+                                'jangan kirim ulang.'
+                          : 'Mengirim pesan…',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           _MessageInput(
             controller: _inputController,
             isSending: _isSending,
@@ -127,7 +176,7 @@ class _ChatScreenState extends State<ChatScreen> {
         key: ValueKey('error'),
         icon: Icons.wifi_off_rounded,
         title: 'Chat gagal dimuat',
-        message: 'Periksa koneksi internet.',
+        message: 'Periksa koneksi atau akses Firestore.',
       );
     }
     if (snapshot.connectionState == ConnectionState.waiting) {
@@ -180,6 +229,11 @@ class _MessageBubble extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final createdAt = message.createdAt;
+    final deliveryStatus = message.hasPendingWrites
+        ? 'Menunggu konfirmasi'
+        : createdAt == null
+        ? 'Waktu belum tersedia'
+        : formatTime(createdAt);
     final background = isMine ? scheme.primary : scheme.surfaceContainerHigh;
     final foreground = isMine ? scheme.onPrimary : scheme.onSurface;
     return Align(
@@ -209,7 +263,7 @@ class _MessageBubble extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                createdAt == null ? 'Mengirim…' : formatTime(createdAt),
+                deliveryStatus,
                 style: text.labelSmall?.copyWith(
                   color: foreground.withValues(alpha: 0.7),
                 ),

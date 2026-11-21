@@ -1,0 +1,181 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(userId) {
+      return /databases/$(database)/documents/users/$(userId);
+    }
+
+    function restaurantPath(restaurantId) {
+      return /databases/$(database)/documents/restaurants/$(restaurantId);
+    }
+
+    function orderPath(orderId) {
+      return /databases/$(database)/documents/orders/$(orderId);
+    }
+
+    function isCustomer() {
+      return signedIn()
+        && exists(userPath(request.auth.uid))
+        && get(userPath(request.auth.uid)).data.role == 'customer';
+    }
+
+    function isRestaurantOperator(restaurantId) {
+      return signedIn()
+        && exists(userPath(request.auth.uid))
+        && get(userPath(request.auth.uid)).data.role == 'restaurant'
+        && get(userPath(request.auth.uid)).data.restaurantId == restaurantId;
+    }
+
+    function isOrderCustomer(order) {
+      return isCustomer() && order.customerUid == request.auth.uid;
+    }
+
+    function canReadOrder(order) {
+      return isOrderCustomer(order)
+        || isRestaurantOperator(order.restaurantId);
+    }
+
+    function changedOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(fields);
+    }
+
+    function validCustomerProfile() {
+      return request.resource.data.keys().hasAll(['role', 'displayName'])
+        && request.resource.data.keys().hasOnly(['role', 'displayName'])
+        && request.resource.data.role == 'customer'
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 100;
+    }
+
+    function validOrderCreate() {
+      return isCustomer()
+        && request.resource.data.keys().hasAll([
+          'customerUid', 'customerName', 'restaurantId', 'restaurantName',
+          'items', 'total', 'status', 'paymentMethod', 'createdAt', 'paidAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'customerUid', 'customerName', 'restaurantId', 'restaurantName',
+          'items', 'total', 'status', 'paymentMethod', 'createdAt', 'paidAt'
+        ])
+        && request.resource.data.customerUid == request.auth.uid
+        && request.resource.data.customerName is string
+        && request.resource.data.customerName
+          == get(userPath(request.auth.uid)).data.displayName
+        && request.resource.data.restaurantId is string
+        && exists(restaurantPath(request.resource.data.restaurantId))
+        && request.resource.data.restaurantName
+          == get(restaurantPath(request.resource.data.restaurantId)).data.name
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.items.size() <= 50
+        && request.resource.data.total is int
+        && request.resource.data.total >= 0
+        && request.resource.data.status == 'pending'
+        && request.resource.data.paymentMethod == null
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.paidAt == null;
+    }
+
+    function canConfirmOrder() {
+      return isRestaurantOperator(resource.data.restaurantId)
+        && resource.data.status == 'pending'
+        && request.resource.data.status == 'confirmed'
+        && changedOnly(['status']);
+    }
+
+    function canCancelOrder() {
+      return (isOrderCustomer(resource.data)
+          || isRestaurantOperator(resource.data.restaurantId))
+        && resource.data.status in ['pending', 'confirmed']
+        && request.resource.data.status == 'cancelled'
+        && changedOnly(['status']);
+    }
+
+    function canPayOrder() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isOrderCustomer(resource.data)
+        && resource.data.status == 'confirmed'
+        && request.resource.data.status == 'paid'
+        && request.resource.data.paymentMethod in ['ewallet', 'bankTransfer']
+        && request.resource.data.paidAt == request.time
+        && changed.hasOnly(['status', 'paymentMethod', 'paidAt'])
+        && changed.hasAll(['status', 'paymentMethod', 'paidAt']);
+    }
+
+    function canReadOrderId(orderId) {
+      return exists(orderPath(orderId))
+        && canReadOrder(get(orderPath(orderId)).data);
+    }
+
+    function validMessageCreate(orderId) {
+      return exists(orderPath(orderId))
+        && canReadOrder(get(orderPath(orderId)).data)
+        && request.resource.data.keys().hasAll([
+          'senderUid', 'senderRole', 'text', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'senderUid', 'senderRole', 'text', 'createdAt'
+        ])
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 500
+        && request.resource.data.createdAt == request.time
+        && (
+          (request.resource.data.senderRole == 'customer'
+            && isOrderCustomer(get(orderPath(orderId)).data))
+          || (request.resource.data.senderRole == 'restaurant'
+            && isRestaurantOperator(
+              get(orderPath(orderId)).data.restaurantId
+            ))
+        );
+    }
+
+    match /users/{userId} {
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list: if false;
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && validCustomerProfile();
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && changedOnly(['displayName'])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() > 0
+        && request.resource.data.displayName.size() <= 100;
+      allow delete: if false;
+    }
+
+    match /restaurants/{restaurantId} {
+      allow read: if signedIn();
+      allow write: if false;
+
+      match /menuItems/{menuItemId} {
+        allow read: if signedIn();
+        allow write: if false;
+      }
+    }
+
+    match /orders/{orderId} {
+      allow get, list: if canReadOrder(resource.data);
+      allow create: if validOrderCreate();
+      allow update: if canConfirmOrder()
+        || canCancelOrder()
+        || canPayOrder();
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow get, list: if canReadOrderId(orderId);
+        allow create: if signedIn() && validMessageCreate(orderId);
+        allow update, delete: if false;
+      }
+    }
+  }
+}

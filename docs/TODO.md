@@ -70,8 +70,8 @@ Mengikuti `PRD.md` dan `ARSITEKTUR.md`. Jadwal di bawah adalah **usulan** (hari 
 - Commit: `feat: add route distance via openrouteservice`
 
 ### L8 — Keamanan dan kondisi error (26 Nov) — M5
-- Pekerjaan: tulis `firestore.rules` sesuai `ARSITEKTUR.md` bagian 7; tampilan kosong dan error yang jelas.
-- Tes: dua akun berbeda; akun A tidak bisa membaca pesanan akun B; pengguna tidak bisa mengubah `role` sendiri; resto tidak bisa membaca pesanan resto lain.
+- Pekerjaan: rules sumber ada di `firestore.rules` dan `firebase.json`; uji di emulator/Rules Playground sebelum deploy; tampilan kosong, status menunggu, dan error yang jelas.
+- Tes: akun A tidak bisa membaca pesanan/chat akun B; pengguna tidak bisa mengubah `role` sendiri; resto tidak bisa membaca pesanan resto lain; hanya pihak yang berhak dapat konfirmasi, batal, atau membayar.
 - Commit: `feat: add firestore security rules`
 
 ### L9 — Pengujian menyeluruh (27–28 Nov)

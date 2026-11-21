@@ -16,10 +16,16 @@ class ChatService {
   Stream<List<ChatMessage>> watchMessages(String orderId) {
     return _messages(orderId)
         .orderBy('createdAt')
-        .snapshots()
+        .snapshots(includeMetadataChanges: true)
         .map(
           (snapshot) => snapshot.docs
-              .map((doc) => ChatMessage.fromMap(doc.id, doc.data()))
+              .map(
+                (doc) => ChatMessage.fromMap(
+                  doc.id,
+                  doc.data(),
+                  hasPendingWrites: doc.metadata.hasPendingWrites,
+                ),
+              )
               .whereType<ChatMessage>()
               .toList(),
         );
@@ -38,7 +44,7 @@ class ChatService {
     if (normalized.length > maxMessageLength) {
       throw ArgumentError('Pesan maksimal $maxMessageLength karakter');
     }
-    await awaitWrite(
+    await waitForServerAck(
       _messages(orderId).doc().set({
         'senderUid': sender.uid,
         'senderRole': sender.role.name,

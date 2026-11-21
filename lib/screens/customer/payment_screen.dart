@@ -41,7 +41,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (mounted) {
         showErrorSnackBar(
           context,
-          'Pembayaran gagal. Periksa koneksi internet.',
+          'Pembayaran gagal. Periksa koneksi atau akses Firestore.',
         );
       }
     } finally {

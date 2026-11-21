@@ -35,7 +35,7 @@ class MyOrdersScreen extends StatelessWidget {
         streamFactory: () => services.orders.watchCustomerOrders(user.uid),
         emptyIcon: Icons.receipt_long_outlined,
         emptyMessage: 'Belum ada pesanan',
-        errorMessage: 'Pesanan gagal dimuat. Periksa koneksi internet.',
+        errorMessage: 'Pesanan gagal dimuat. Periksa koneksi atau akses Firestore.',
         itemBuilder: (context, order) => OrderCard(
           order: order,
           title: order.restaurantName,

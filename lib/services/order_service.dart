@@ -27,7 +27,7 @@ class OrderService {
     final items = cartItems.map(OrderItem.fromCartItem).toList();
     // Id dibuat di perangkat agar pesanan bisa langsung dibuka walau koneksi lambat
     final doc = _orders.doc();
-    await awaitWrite(
+    await waitForServerAck(
       doc.set({
         'customerUid': customerUid,
         'customerName': customerName,

@@ -19,6 +19,7 @@ class ChatMessage {
   final String text;
   // Null sesaat setelah dikirim, sebelum waktu server tercatat
   final DateTime? createdAt;
+  final bool hasPendingWrites;
 
   const ChatMessage({
     required this.id,
@@ -26,10 +27,15 @@ class ChatMessage {
     required this.senderRole,
     required this.text,
     this.createdAt,
+    this.hasPendingWrites = false,
   });
 
   // Membaca pesan dari Firestore; null bila field inti tidak valid
-  static ChatMessage? fromMap(String id, Map<String, dynamic> data) {
+  static ChatMessage? fromMap(
+    String id,
+    Map<String, dynamic> data, {
+    bool hasPendingWrites = false,
+  }) {
     final senderUid = data['senderUid'];
     final text = data['text'];
     final role = UserRole.values.asNameMap()[data['senderRole']];
@@ -41,6 +47,7 @@ class ChatMessage {
       senderRole: role,
       text: text,
       createdAt: createdAt is Timestamp ? createdAt.toDate() : null,
+      hasPendingWrites: hasPendingWrites,
     );
   }
 }

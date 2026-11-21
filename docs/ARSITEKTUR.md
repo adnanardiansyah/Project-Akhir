@@ -104,8 +104,8 @@ Alasan `items` menyalin nama dan harga: harga di pesanan tidak berubah kalau men
 
 1. **Login:** `auth_service` masuk, lalu baca `users/{uid}.role`; `app.dart` membuka layar pemesan atau resto.
 2. **Daftar resto dan menu (M1):** `StreamBuilder` pada `restaurants` dan `menuItems`.
-3. **Keranjang dan pesanan:** `cart_controller` menyimpan item di memori; "Buat Pesanan" menulis satu dokumen `orders` dengan status `pending`.
-4. **Chat (M2):** `chat_service` menulis ke `orders/{id}/messages`; kedua sisi mendengarkan koleksi yang sama diurutkan `createdAt`, sehingga pesan muncul tanpa refresh.
+3. **Keranjang dan pesanan:** `cart_controller` menyimpan item di memori; "Buat Pesanan" menulis satu dokumen `orders` dengan status `pending`. Keranjang terkunci sampai server mengonfirmasi atau menolak; setelah 10 detik UI memberi tahu bahwa status masih menunggu.
+4. **Chat (M2):** `chat_service` menulis ke `orders/{id}/messages`; kedua sisi mendengarkan koleksi yang sama diurutkan `createdAt`, sehingga pesan muncul tanpa refresh. Pesan lokal ditandai menunggu sampai server mengonfirmasi; bila write ditolak, teks dikembalikan ke kolom.
 5. **Konfirmasi dan batal:** resto mengubah `status` ke `confirmed` atau `cancelled`; pemesan hanya boleh membatalkan sebelum `paid`.
 6. **Pembayaran simulasi (M3):** pemesan memilih metode, `status` menjadi `paid`, `paymentMethod` dan `paidAt` terisi. Tidak ada uang sungguhan.
 7. **Jarak rute (M4):** `location_service` membagikan lokasi GPS terkini ke label di daftar resto dan detail pesanan. Tombol perbarui mengambil GPS baru dan semua label yang sedang tampil menghitung ulang. `route_distance_service` memanggil OpenRouteService; hasil meter diubah ke km oleh `format_distance`.
@@ -134,12 +134,12 @@ Jika GPS mati atau izinnya ditolak, label memberi petunjuk untuk mengaktifkan GP
 ## 7. Keamanan data (aturan Firestore)
 
 Prinsip yang ditulis di `firestore.rules`:
-- Pengguna hanya membaca dan mengubah dokumen `users` miliknya; **tidak boleh mengubah `role` menjadi `restaurant`** (U4).
+- Pengguna hanya membaca profilnya sendiri dan hanya boleh mengubah `displayName`; pendaftaran dari aplikasi hanya membuat peran `customer`, jadi pengguna tidak dapat memberi dirinya peran `restaurant` (U4).
 - `restaurants` dan `menuItems`: semua pengguna yang login boleh membaca; tulis ditutup dari aplikasi. Data usaha nyata bersumber publik dan dimasukkan lewat Console; akun operator aplikasi tidak menyatakan hubungan dengan pemilik usaha.
-- `orders`: pemesan membaca dan membuat pesanan miliknya; resto hanya membaca dan mengubah pesanan dengan `restaurantId` miliknya.
-- `messages`: hanya pemesan dan resto pada pesanan itu yang boleh membaca dan menulis; `senderUid` harus sama dengan pengguna yang login.
+- `orders`: pemesan hanya membuat dan membaca pesanan miliknya; resto hanya membaca pesanan dengan `restaurantId` yang ditetapkan di profil. Resto dapat mengonfirmasi, pemesan dapat membayar setelah dikonfirmasi, dan kedua pihak dapat membatalkan sebelum `paid`; perubahan hanya pada field status/pembayaran yang diizinkan.
+- `messages`: hanya pemesan dan resto pada pesanan yang sama yang boleh membaca dan menambah pesan. `senderUid` dan `senderRole` harus cocok dengan akun login; pesan tidak dapat diubah atau dihapus.
 
-Teks aturan ditulis dan diuji di langkah L8 dengan dua akun berbeda.
+Rules sumber ada di `firestore.rules`, ditautkan dari `firebase.json`, dan proyek default ditetapkan di `.firebaserc`. Rules lokal ini belum diuji atau dideploy dari repo, dan belum diverifikasi terhadap aturan yang mungkin sudah terpasang di Firebase Console. Langkah L8 tetap harus menguji dua akun dan alur transaksi sebelum rules diterapkan ke proyek Firebase.
 
 ## 8. Strategi tes
 

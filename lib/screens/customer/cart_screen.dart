@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../controllers/cart_controller.dart';
 import '../../models/app_user.dart';
 import '../../models/cart_item.dart';
 import '../../services/app_services.dart';
+import '../../services/firestore_write.dart';
 import '../../utils/format_rupiah.dart';
 import '../../widgets/error_snack_bar.dart';
 import '../../widgets/fade_slide_in.dart';
@@ -30,16 +33,52 @@ class CartScreen extends StatefulWidget {
   State<CartScreen> createState() => _CartScreenState();
 }
 
-// Menyimpan tanda sedang mengirim pesanan
+// Menunggu konfirmasi server tanpa mengizinkan pesanan yang sama dikirim dua kali.
 class _CartScreenState extends State<CartScreen> {
-  bool _isSubmitting = false;
+  bool _waitingForServer = false;
+  Timer? _pendingNoticeTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _schedulePendingNotice();
+  }
+
+  @override
+  void dispose() {
+    _pendingNoticeTimer?.cancel();
+    super.dispose();
+  }
+
+  void _schedulePendingNotice() {
+    _pendingNoticeTimer?.cancel();
+    final startedAt = widget.cart.orderSubmissionStartedAt;
+    if (startedAt == null) {
+      _waitingForServer = false;
+      return;
+    }
+    final remaining =
+        writePendingNoticeDelay - DateTime.now().difference(startedAt);
+    if (remaining <= Duration.zero) {
+      _waitingForServer = true;
+      return;
+    }
+    _pendingNoticeTimer = Timer(remaining, () {
+      if (mounted && widget.cart.isSubmittingOrder) {
+        setState(() => _waitingForServer = true);
+      }
+    });
+  }
 
   // Menulis pesanan ke Firestore, mengosongkan keranjang, lalu membuka detail pesanan
   Future<void> _submit() async {
     final cart = widget.cart;
     final restaurant = cart.restaurant;
-    if (_isSubmitting || restaurant == null || cart.isEmpty) return;
-    setState(() => _isSubmitting = true);
+    if (restaurant == null || cart.isEmpty || !cart.beginOrderSubmission()) {
+      return;
+    }
+    setState(() => _waitingForServer = false);
+    _schedulePendingNotice();
     try {
       final orderId = await widget.services.orders.createOrder(
         customerUid: widget.user.uid,
@@ -47,6 +86,8 @@ class _CartScreenState extends State<CartScreen> {
         restaurant: restaurant,
         cartItems: cart.items,
       );
+      _pendingNoticeTimer?.cancel();
+      cart.finishOrderSubmission(succeeded: true);
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
@@ -59,14 +100,14 @@ class _CartScreenState extends State<CartScreen> {
           (route) => route.isFirst,
         );
       }
-      // Dikosongkan walau layar sudah ditutup, agar pesanan tidak terkirim dua kali
-      cart.clear();
     } catch (_) {
+      _pendingNoticeTimer?.cancel();
+      cart.finishOrderSubmission(succeeded: false);
       if (mounted) {
-        setState(() => _isSubmitting = false);
+        setState(() => _waitingForServer = false);
         showErrorSnackBar(
           context,
-          'Pesanan gagal dibuat. Periksa koneksi internet.',
+          'Pesanan gagal disimpan. Periksa koneksi dan akses Firestore.',
         );
       }
     }
@@ -117,7 +158,11 @@ class _CartScreenState extends State<CartScreen> {
                     for (final (index, item) in items.indexed) ...[
                       FadeSlideIn(
                         index: index + 1,
-                        child: _CartItemCard(item: item, cart: cart),
+                        child: _CartItemCard(
+                          item: item,
+                          cart: cart,
+                          isDisabled: cart.isSubmittingOrder,
+                        ),
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -126,7 +171,8 @@ class _CartScreenState extends State<CartScreen> {
               ),
               _CheckoutPanel(
                 total: cart.total,
-                isSubmitting: _isSubmitting,
+                isSubmitting: cart.isSubmittingOrder,
+                isWaitingForServer: _waitingForServer,
                 onSubmit: _submit,
               ),
             ],
@@ -141,8 +187,13 @@ class _CartScreenState extends State<CartScreen> {
 class _CartItemCard extends StatelessWidget {
   final CartItem item;
   final CartController cart;
+  final bool isDisabled;
 
-  const _CartItemCard({required this.item, required this.cart});
+  const _CartItemCard({
+    required this.item,
+    required this.cart,
+    required this.isDisabled,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -172,8 +223,12 @@ class _CartItemCard extends StatelessWidget {
             ),
             QuantityStepper(
               quantity: item.quantity,
-              onIncrement: () => cart.add(restaurant, item.menuItem),
-              onDecrement: () => cart.decrement(item.menuItem.id),
+              onIncrement: isDisabled
+                  ? null
+                  : () => cart.add(restaurant, item.menuItem),
+              onDecrement: isDisabled
+                  ? null
+                  : () => cart.decrement(item.menuItem.id),
             ),
           ],
         ),
@@ -186,11 +241,13 @@ class _CartItemCard extends StatelessWidget {
 class _CheckoutPanel extends StatelessWidget {
   final int total;
   final bool isSubmitting;
+  final bool isWaitingForServer;
   final VoidCallback onSubmit;
 
   const _CheckoutPanel({
     required this.total,
     required this.isSubmitting,
+    required this.isWaitingForServer,
     required this.onSubmit,
   });
 
@@ -223,6 +280,29 @@ class _CheckoutPanel extends StatelessWidget {
                   ),
                 ],
               ),
+              if (isWaitingForServer) ...[
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.cloud_sync_outlined,
+                      size: 18,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Pesanan belum dikonfirmasi server. Tunggu koneksi; '
+                        'jangan kirim pesanan lagi.',
+                        style: text.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 16),
               LoadingButton(
                 label: 'Buat Pesanan',

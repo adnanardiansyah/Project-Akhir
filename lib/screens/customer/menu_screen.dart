@@ -8,6 +8,7 @@ import '../../services/app_services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/format_rupiah.dart';
 import '../../widgets/cart_bar.dart';
+import '../../widgets/error_snack_bar.dart';
 import '../../widgets/logout_button.dart';
 import '../../widgets/quantity_stepper.dart';
 import '../../widgets/restaurant_avatar.dart';
@@ -31,6 +32,13 @@ class MenuScreen extends StatelessWidget {
 
   // Menambah menu; bila keranjang berisi menu resto lain, minta konfirmasi ganti
   Future<void> _addItem(BuildContext context, MenuItem item) async {
+    if (cart.isSubmittingOrder) {
+      showErrorSnackBar(
+        context,
+        'Pesanan sedang dikirim. Tunggu konfirmasi server terlebih dahulu.',
+      );
+      return;
+    }
     if (cart.canAddFrom(restaurant)) {
       cart.add(restaurant, item);
       return;
@@ -79,7 +87,7 @@ class MenuScreen extends StatelessWidget {
                 services.restaurants.watchMenuItems(restaurant.id),
             emptyIcon: Icons.no_meals_rounded,
             emptyMessage: 'Menu resto ini belum tersedia',
-            errorMessage: 'Menu gagal dimuat. Periksa koneksi internet.',
+            errorMessage: 'Menu gagal dimuat. Periksa koneksi atau akses Firestore.',
             bottomPadding: 120,
             header: _RestaurantHeader(restaurant: restaurant),
             itemBuilder: (context, item) => _MenuItemCard(
@@ -178,8 +186,10 @@ class _MenuItemCard extends StatelessWidget {
               listenable: cart,
               builder: (context, _) => QuantityStepper(
                 quantity: cart.quantityOf(item.id),
-                onIncrement: onAdd,
-                onDecrement: () => cart.decrement(item.id),
+                onIncrement: cart.isSubmittingOrder ? null : onAdd,
+                onDecrement: cart.isSubmittingOrder
+                    ? null
+                    : () => cart.decrement(item.id),
               ),
             ),
           ],

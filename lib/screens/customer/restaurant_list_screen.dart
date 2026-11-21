@@ -56,7 +56,7 @@ class RestaurantListScreen extends StatelessWidget {
             emptyIcon: Icons.storefront_rounded,
             emptyMessage: 'Belum ada resto',
             errorMessage:
-                'Daftar resto gagal dimuat. Periksa koneksi internet.',
+                'Daftar resto gagal dimuat. Periksa koneksi atau akses Firestore.',
             bottomPadding: 120,
             header: _Greeting(name: user.displayName),
             itemBuilder: (context, restaurant) => _RestaurantCard(

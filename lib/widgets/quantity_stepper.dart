@@ -5,8 +5,8 @@ import '../theme/app_theme.dart';
 // Tombol "Tambah" yang berubah menjadi pengatur jumlah (- n +) setelah menu dipilih
 class QuantityStepper extends StatelessWidget {
   final int quantity;
-  final VoidCallback onIncrement;
-  final VoidCallback onDecrement;
+  final VoidCallback? onIncrement;
+  final VoidCallback? onDecrement;
 
   const QuantityStepper({
     super.key,
@@ -45,8 +45,8 @@ class QuantityStepper extends StatelessWidget {
 // Pengatur jumlah dengan angka yang beranimasi saat berubah
 class _Stepper extends StatelessWidget {
   final int quantity;
-  final VoidCallback onIncrement;
-  final VoidCallback onDecrement;
+  final VoidCallback? onIncrement;
+  final VoidCallback? onDecrement;
 
   const _Stepper({
     super.key,

@@ -52,7 +52,7 @@ class IncomingOrdersScreen extends StatelessWidget {
                   services.orders.watchRestaurantOrders(restaurantId),
               emptyIcon: Icons.receipt_long_outlined,
               emptyMessage: 'Belum ada pesanan masuk untuk ${user.displayName}',
-              errorMessage: 'Pesanan gagal dimuat. Periksa koneksi internet.',
+              errorMessage: 'Pesanan gagal dimuat. Periksa koneksi atau akses Firestore.',
               header: _Header(name: user.displayName),
               itemBuilder: (context, order) => OrderCard(
                 order: order,

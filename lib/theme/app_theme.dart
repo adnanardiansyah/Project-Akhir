@@ -56,7 +56,9 @@ ThemeData _buildTheme(Brightness brightness) {
   final text = base.textTheme;
 
   return base.copyWith(
-    scaffoldBackgroundColor: scheme.surface,
+    scaffoldBackgroundColor: isLight
+        ? const Color(0xFFF6F8F5)
+        : scheme.surface,
     textTheme: text.copyWith(
       headlineMedium: text.headlineMedium?.copyWith(
         fontWeight: FontWeight.w800,
@@ -166,10 +168,19 @@ ThemeData _buildTheme(Brightness brightness) {
 
 // Status bar transparan dengan ikon kontras terhadap latar
 SystemUiOverlayStyle _overlayStyle(Brightness brightness) {
-  final base = brightness == Brightness.light
+  final isLight = brightness == Brightness.light;
+  final base = isLight
       ? SystemUiOverlayStyle.dark
       : SystemUiOverlayStyle.light;
-  return base.copyWith(statusBarColor: Colors.transparent);
+  return base.copyWith(
+    statusBarColor: Colors.transparent,
+    systemNavigationBarColor: isLight
+        ? const Color(0xFFF6F8F5)
+        : const Color(0xFF121A19),
+    systemNavigationBarIconBrightness: isLight
+        ? Brightness.dark
+        : Brightness.light,
+  );
 }
 
 // Gaya status bar untuk layar tanpa AppBar, mengikuti tema yang aktif

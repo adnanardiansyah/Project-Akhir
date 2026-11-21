@@ -29,7 +29,7 @@ class FoodOrderApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.light,
       // Status bar transparan untuk semua layar, termasuk yang tanpa AppBar
       builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
         value: overlayStyleFor(context),

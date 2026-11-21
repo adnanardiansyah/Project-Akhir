@@ -12,10 +12,10 @@ const List<IconData> _foodIcons = [
 
 // Pasangan warna gradasi hangat untuk latar avatar
 const List<List<Color>> _gradients = [
-  [Color(0xFFFF8A3D), Color(0xFFF2541B)],
-  [Color(0xFFFFB547), Color(0xFFF2811D)],
-  [Color(0xFFFF7A6B), Color(0xFFE5484D)],
-  [Color(0xFFF7A35C), Color(0xFFD9622B)],
+  [Color(0xFF0F766E), Color(0xFF115E59)],
+  [Color(0xFF15803D), Color(0xFF166534)],
+  [Color(0xFF0E7490), Color(0xFF155E75)],
+  [Color(0xFF4D7C0F), Color(0xFF3F6212)],
 ];
 
 // Avatar resto bergradasi dengan ikon; Hero membuatnya berpindah mulus antar layar

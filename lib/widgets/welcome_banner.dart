@@ -28,7 +28,7 @@ class WelcomeBanner extends StatelessWidget {
         borderRadius: radius,
         boxShadow: [
           BoxShadow(
-            color: brandOrangeDeep.withValues(alpha: 0.16),
+            color: brandGreenDeep.withValues(alpha: 0.2),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
@@ -39,7 +39,7 @@ class WelcomeBanner extends StatelessWidget {
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF9E3A0D), Color(0xFFB9440C)],
+              colors: [brandGreenDeep, brandGreen],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),

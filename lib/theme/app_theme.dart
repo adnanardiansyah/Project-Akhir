@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-// Warna merek: oranye hangat yang identik dengan makanan
-const Color brandOrange = Color(0xFFF26B1D);
+// Warna merek: hijau-teal yang memberi kesan segar dan profesional.
+const Color brandGreen = Color(0xFF0F766E);
 
-// Hijau penanda berhasil dan lunas
-const Color successGreen = Color(0xFF1F9D55);
+// Hijau lebih gelap untuk tombol utama dan label merek.
+const Color brandGreenDeep = Color(0xFF115E59);
 
-// Oranye sedikit lebih pekat untuk tombol dan teks aksen di mode terang
-const Color brandOrangeDeep = Color(0xFFE4570F);
+// Hijau semantik untuk pembayaran berhasil.
+const Color successGreen = Color(0xFF16845B);
 
 // Jari-jari sudut standar untuk kartu dan kolom isian
 const double cardRadius = 20;
@@ -32,13 +32,13 @@ ThemeData buildDarkTheme() => _buildTheme(Brightness.dark);
 ThemeData _buildTheme(Brightness brightness) {
   final isLight = brightness == Brightness.light;
   final seeded = ColorScheme.fromSeed(
-    seedColor: brandOrange,
+    seedColor: brandGreen,
     brightness: brightness,
     dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
   );
   // Mode terang: oranye cerah senada logo, tetap terbaca dengan teks putih tebal
   final primaryScheme = isLight
-      ? seeded.copyWith(primary: brandOrangeDeep, onPrimary: Colors.white)
+      ? seeded.copyWith(primary: brandGreenDeep, onPrimary: Colors.white)
       : seeded;
   // Tombol tonal dan chip memakai oranye tipis di atas latar, senada dengan aksen
   final scheme = primaryScheme.copyWith(

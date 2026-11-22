@@ -61,6 +61,19 @@ class AdminService {
         );
   }
 
+  // Jumlah akun pemesan untuk ringkasan dashboard admin.
+  Stream<List<AppUser>> watchCustomers() {
+    return _users
+        .where('role', isEqualTo: 'customer')
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => AppUser.fromMap(doc.id, doc.data()))
+              .whereType<AppUser>()
+              .toList(),
+        );
+  }
+
   Stream<List<PartnerApplication>> watchPartnerApplications() {
     return _applications
         .orderBy('createdAt', descending: true)
@@ -80,7 +93,11 @@ class AdminService {
     String rejectionReason = '',
   }) async {
     if (status == PartnerApplicationStatus.pending) {
-      throw ArgumentError.value(status, 'status', 'Status tinjauan tidak valid');
+      throw ArgumentError.value(
+        status,
+        'status',
+        'Status tinjauan tidak valid',
+      );
     }
 
     final applicationRef = _applications.doc(application.applicantUid);
@@ -89,8 +106,8 @@ class AdminService {
     await _firestore.runTransaction((transaction) async {
       final applicationSnapshot = await transaction.get(applicationRef);
       final userSnapshot = await transaction.get(userRef);
-      final restaurantSnapshot = application.type ==
-              PartnerApplicationType.restaurant
+      final restaurantSnapshot =
+          application.type == PartnerApplicationType.restaurant
           ? await transaction.get(restaurantRef)
           : null;
       final data = applicationSnapshot.data();
@@ -104,7 +121,9 @@ class AdminService {
         throw StateError('Pengajuan sudah ditinjau atau tidak ditemukan.');
       }
       if (!userSnapshot.exists || userSnapshot.data()?['role'] != 'customer') {
-        throw StateError('Profil calon mitra tidak tersedia atau sudah berubah.');
+        throw StateError(
+          'Profil calon mitra tidak tersedia atau sudah berubah.',
+        );
       }
 
       if (status == PartnerApplicationStatus.approved &&

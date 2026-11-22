@@ -10,6 +10,8 @@ import '../../utils/format_date_time.dart';
 import '../../utils/format_rupiah.dart';
 import '../../widgets/error_snack_bar.dart';
 import '../../widgets/logout_button.dart';
+import '../../widgets/courier_tracking_map.dart';
+import '../../widgets/order_filter_bar.dart';
 import '../../widgets/order_status_chip.dart';
 import '../../widgets/restaurant_avatar.dart';
 import '../../widgets/state_message.dart';
@@ -44,13 +46,18 @@ class AdminDashboardScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _AdminOverviewTab(user: user, services: services),
-            _RestaurantReviewTab(user: user, services: services),
-            _OrderMonitoringTab(services: services),
-            PartnerApplicationsTab(user: user, services: services),
-          ],
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1280),
+            child: TabBarView(
+              children: [
+                _AdminOverviewTab(user: user, services: services),
+                _RestaurantReviewTab(user: user, services: services),
+                _OrderMonitoringTab(services: services),
+                PartnerApplicationsTab(user: user, services: services),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -70,6 +77,8 @@ class _AdminOverviewTab extends StatefulWidget {
 class _AdminOverviewTabState extends State<_AdminOverviewTab> {
   late final _restaurants = widget.services.admin.watchRestaurants();
   late final _orders = widget.services.admin.watchOrders();
+  late final _couriers = widget.services.admin.watchCouriers();
+  late final _customers = widget.services.admin.watchCustomers();
 
   @override
   Widget build(BuildContext context) {
@@ -91,100 +100,162 @@ class _AdminOverviewTabState extends State<_AdminOverviewTab> {
             if (orderSnapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
-            final restaurants = restaurantSnapshot.data ?? const [];
-            final orders = orderSnapshot.data ?? const [];
-            final pendingRestaurants = restaurants
-                .where(
-                  (restaurant) =>
-                      restaurant.reviewStatus == RestaurantReviewStatus.pending,
-                )
-                .length;
-            final approvedRestaurants = restaurants
-                .where(
-                  (restaurant) =>
-                      restaurant.reviewStatus ==
-                      RestaurantReviewStatus.approved,
-                )
-                .length;
-            final activeOrders = orders
-                .where(
-                  (order) =>
-                      order.status == OrderStatus.pending ||
-                      order.status == OrderStatus.confirmed,
-                )
-                .length;
-            final paidOrders = orders
-                .where((order) => order.status == OrderStatus.paid)
-                .length;
+            return StreamBuilder<List<AppUser>>(
+              stream: _couriers,
+              builder: (context, courierSnapshot) {
+                if (courierSnapshot.hasError) {
+                  return const _AdminStreamError(kind: 'daftar kurir');
+                }
+                if (courierSnapshot.connectionState ==
+                    ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return StreamBuilder<List<AppUser>>(
+                  stream: _customers,
+                  builder: (context, customerSnapshot) {
+                    if (customerSnapshot.hasError) {
+                      return const _AdminStreamError(kind: 'daftar customer');
+                    }
+                    if (customerSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final restaurants = restaurantSnapshot.data ?? const [];
+                    final orders = orderSnapshot.data ?? const [];
+                    final couriers = courierSnapshot.data ?? const <AppUser>[];
+                    final customers =
+                        customerSnapshot.data ?? const <AppUser>[];
+                    final pendingRestaurants = restaurants
+                        .where(
+                          (restaurant) =>
+                              restaurant.reviewStatus ==
+                              RestaurantReviewStatus.pending,
+                        )
+                        .length;
+                    final approvedRestaurants = restaurants
+                        .where(
+                          (restaurant) =>
+                              restaurant.reviewStatus ==
+                              RestaurantReviewStatus.approved,
+                        )
+                        .length;
+                    final ordersNeedingCourier = orders
+                        .where(
+                          (order) =>
+                              order.status == OrderStatus.paid &&
+                              order.assignedCourierUid == null,
+                        )
+                        .length;
+                    final inTransit = orders
+                        .where(
+                          (order) =>
+                              order.deliveryStatus == DeliveryStatus.inTransit,
+                        )
+                        .length;
 
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-              children: [
-                WelcomeBanner(
-                  eyebrow: 'Monitoring aplikasi',
-                  title: 'Halo, ${widget.user.displayName}',
-                  subtitle: 'Pantau resto dan pesanan dari satu tempat.',
-                  icon: Icons.admin_panel_settings_rounded,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Ringkasan',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 12),
-                GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.3,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _DashboardMetric(
-                      label: 'Perlu ditinjau',
-                      value: pendingRestaurants,
-                      icon: Icons.rate_review_outlined,
-                      color: const Color(0xFFB45309),
-                    ),
-                    _DashboardMetric(
-                      label: 'Resto disetujui',
-                      value: approvedRestaurants,
-                      icon: Icons.storefront_rounded,
-                      color: brandGreen,
-                    ),
-                    _DashboardMetric(
-                      label: 'Pesanan berjalan',
-                      value: activeOrders,
-                      icon: Icons.pending_actions_rounded,
-                      color: const Color(0xFF2563A6),
-                    ),
-                    _DashboardMetric(
-                      label: 'Pesanan dibayar',
-                      value: paidOrders,
-                      icon: Icons.payments_outlined,
-                      color: successGreen,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Pesanan terbaru',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 10),
-                if (orders.isEmpty)
-                  const _InlineEmpty(
-                    icon: Icons.receipt_long_outlined,
-                    message: 'Belum ada pesanan untuk dipantau.',
-                  )
-                else
-                  for (final order in orders.take(5))
-                    _AdminOrderCard(
-                      order: order,
-                      services: widget.services,
-                      allowCourierAssignment: false,
-                    ),
-              ],
+                    return ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                      children: [
+                        WelcomeBanner(
+                          eyebrow: 'Monitoring aplikasi',
+                          title: 'Halo, ${widget.user.displayName}',
+                          subtitle:
+                              'Tinjauan resto, pesanan, dan pengantaran dalam satu panel.',
+                          icon: Icons.admin_panel_settings_rounded,
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Ringkasan operasional',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 12),
+                        LayoutBuilder(
+                          builder: (context, constraints) => GridView.count(
+                            crossAxisCount: constraints.maxWidth >= 1000
+                                ? 4
+                                : constraints.maxWidth >= 620
+                                ? 3
+                                : 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: constraints.maxWidth >= 1000
+                                ? 3.0
+                                : constraints.maxWidth >= 620
+                                ? 1.7
+                                : 1.35,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              _DashboardMetric(
+                                label: 'Resto perlu ditinjau',
+                                value: pendingRestaurants,
+                                icon: Icons.rate_review_outlined,
+                                color: const Color(0xFFB45309),
+                              ),
+                              _DashboardMetric(
+                                label: 'Resto disetujui',
+                                value: approvedRestaurants,
+                                icon: Icons.storefront_rounded,
+                                color: brandGreen,
+                              ),
+                              _DashboardMetric(
+                                label: 'Akun customer',
+                                value: customers.length,
+                                icon: Icons.people_alt_outlined,
+                                color: const Color(0xFF7C3AED),
+                              ),
+                              _DashboardMetric(
+                                label: 'Akun kurir',
+                                value: couriers.length,
+                                icon: Icons.delivery_dining_rounded,
+                                color: brandGreen,
+                              ),
+                              _DashboardMetric(
+                                label: 'Total pesanan',
+                                value: orders.length,
+                                icon: Icons.receipt_long_outlined,
+                                color: const Color(0xFF2563A6),
+                              ),
+                              _DashboardMetric(
+                                label: 'Menunggu kurir',
+                                value: ordersNeedingCourier,
+                                icon: Icons.person_search_outlined,
+                                color: const Color(0xFFB45309),
+                              ),
+                              _DashboardMetric(
+                                label: 'Sedang diantar',
+                                value: inTransit,
+                                icon: Icons.route_outlined,
+                                color: successGreen,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        _OrderStatusBreakdown(orders: orders),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Pesanan terbaru',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 10),
+                        if (orders.isEmpty)
+                          const _InlineEmpty(
+                            icon: Icons.receipt_long_outlined,
+                            message: 'Belum ada pesanan untuk dipantau.',
+                          )
+                        else
+                          for (final order in orders.take(5))
+                            _AdminOrderCard(
+                              order: order,
+                              services: widget.services,
+                              allowCourierAssignment: false,
+                            ),
+                      ],
+                    );
+                  },
+                );
+              },
             );
           },
         );
@@ -252,6 +323,66 @@ class _DashboardMetric extends StatelessWidget {
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderStatusBreakdown extends StatelessWidget {
+  final List<FoodOrder> orders;
+
+  const _OrderStatusBreakdown({required this.orders});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final colors = {
+      OrderStatus.pending: const Color(0xFFB45309),
+      OrderStatus.confirmed: const Color(0xFF2563A6),
+      OrderStatus.paid: successGreen,
+      OrderStatus.cancelled: scheme.error,
+    };
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Status pesanan', style: text.titleMedium),
+                ),
+                Text('${orders.length} total', style: text.labelMedium),
+              ],
+            ),
+            const SizedBox(height: 14),
+            for (final status in OrderStatus.values) ...[
+              Row(
+                children: [
+                  Expanded(child: Text(status.label, style: text.bodySmall)),
+                  Text(
+                    '${orders.where((order) => order.status == status).length}',
+                    style: text.labelLarge,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              LinearProgressIndicator(
+                value: orders.isEmpty
+                    ? 0
+                    : orders.where((order) => order.status == status).length /
+                          orders.length,
+                minHeight: 7,
+                borderRadius: BorderRadius.circular(99),
+                color: colors[status],
+                backgroundColor: scheme.surfaceContainerHighest,
+              ),
+              if (status != OrderStatus.cancelled) const SizedBox(height: 12),
+            ],
           ],
         ),
       ),
@@ -677,7 +808,15 @@ class _OrderMonitoringTab extends StatefulWidget {
 class _OrderMonitoringTabState extends State<_OrderMonitoringTab> {
   late final _orders = widget.services.admin.watchOrders();
   late final _couriers = widget.services.admin.watchCouriers();
+  final _searchController = TextEditingController();
+  String _query = '';
   OrderStatus? _status;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -694,9 +833,32 @@ class _OrderMonitoringTabState extends State<_OrderMonitoringTab> {
           stream: _couriers,
           builder: (context, courierSnapshot) {
             final orders = snapshot.data ?? const <FoodOrder>[];
-            final visibleOrders = _status == null
-                ? orders
-                : orders.where((order) => order.status == _status).toList();
+            final counts = {
+              for (final status in OrderStatus.values)
+                status: orders.where((order) => order.status == status).length,
+            };
+            final query = _query.trim().toLowerCase();
+            final visibleOrders = orders.where((order) {
+              final matchesQuery =
+                  query.isEmpty ||
+                  order.restaurantName.toLowerCase().contains(query) ||
+                  order.customerName.toLowerCase().contains(query) ||
+                  order.id.toLowerCase().contains(query);
+              return matchesQuery &&
+                  (_status == null || order.status == _status);
+            }).toList();
+            final waitingForCourier = orders
+                .where(
+                  (order) =>
+                      order.status == OrderStatus.paid &&
+                      order.assignedCourierUid == null,
+                )
+                .length;
+            final inTransit = orders
+                .where(
+                  (order) => order.deliveryStatus == DeliveryStatus.inTransit,
+                )
+                .length;
             return ListView(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
               children: [
@@ -706,32 +868,46 @@ class _OrderMonitoringTabState extends State<_OrderMonitoringTab> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Status dan pengantaran diperbarui langsung dari Firestore.',
+                  'Pantau pembayaran, penugasan kurir, dan perjalanan pesanan.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
+                const SizedBox(height: 14),
+                LayoutBuilder(
+                  builder: (context, constraints) => GridView.count(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: constraints.maxWidth >= 720 ? 2.8 : 1.5,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                     children: [
-                      ChoiceChip(
-                        label: const Text('Semua'),
-                        selected: _status == null,
-                        onSelected: (_) => setState(() => _status = null),
+                      _DashboardMetric(
+                        label: 'Sudah dibayar, menunggu kurir',
+                        value: waitingForCourier,
+                        icon: Icons.person_search_outlined,
+                        color: const Color(0xFFB45309),
                       ),
-                      const SizedBox(width: 8),
-                      for (final status in OrderStatus.values) ...[
-                        ChoiceChip(
-                          label: Text(status.label),
-                          selected: _status == status,
-                          onSelected: (_) => setState(() => _status = status),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
+                      _DashboardMetric(
+                        label: 'Pengantaran berlangsung',
+                        value: inTransit,
+                        icon: Icons.delivery_dining_rounded,
+                        color: successGreen,
+                      ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 14),
+                OrderFilterBar(
+                  controller: _searchController,
+                  query: _query,
+                  selectedStatus: _status,
+                  statusCounts: counts,
+                  totalCount: orders.length,
+                  searchHint: 'Cari nama resto, pemesan, atau ID pesanan',
+                  onQueryChanged: (value) => setState(() => _query = value),
+                  onStatusChanged: (value) => setState(() => _status = value),
                 ),
                 const SizedBox(height: 12),
                 if (courierSnapshot.hasError)
@@ -751,7 +927,7 @@ class _OrderMonitoringTabState extends State<_OrderMonitoringTab> {
                 if (visibleOrders.isEmpty)
                   const _InlineEmpty(
                     icon: Icons.receipt_long_outlined,
-                    message: 'Tidak ada pesanan untuk status ini.',
+                    message: 'Ubah kata pencarian atau filter status.',
                   )
                 else
                   for (final order in visibleOrders)
@@ -873,6 +1049,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final date = order.createdAt;
+    final locationUpdatedAt = order.courierLocationUpdatedAt;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
@@ -937,6 +1114,40 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                 '${order.deliveryStatus?.label ?? 'Kurir ditugaskan'}: '
                 '${order.assignedCourierName}',
                 style: text.bodySmall?.copyWith(color: scheme.primary),
+              ),
+            ],
+            if (order.deliveryStatus == DeliveryStatus.inTransit) ...[
+              const SizedBox(height: 4),
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                leading: Icon(
+                  Icons.location_searching_rounded,
+                  color: scheme.primary,
+                ),
+                title: const Text('Pantau perjalanan kurir'),
+                subtitle: Text(
+                  locationUpdatedAt == null
+                      ? 'Menunggu pembaruan lokasi GPS'
+                      : 'Posisi diperbarui ${formatDateTime(locationUpdatedAt)}',
+                ),
+                children: [
+                  if (order.courierLocation != null &&
+                      order.deliveryLocation != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: CourierTrackingMap(
+                        courierLocation: order.courierLocation,
+                        destination: order.deliveryLocation,
+                      ),
+                    )
+                  else
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Text(
+                        'Peta akan tampil setelah lokasi kurir dan tujuan tersedia.',
+                      ),
+                    ),
+                ],
               ),
             ],
             if (widget.allowCourierAssignment &&

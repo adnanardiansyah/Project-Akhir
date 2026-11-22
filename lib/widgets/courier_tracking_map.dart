@@ -51,20 +51,32 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
   Widget build(BuildContext context) {
     final courier = widget.courierLocation;
     final target = widget.destination;
-    if (courier == null || target == null) {
+    if (courier == null && target == null) {
       return const SizedBox.shrink();
     }
 
-    final courierPoint = LatLng(courier.latitude, courier.longitude);
-    final destinationPoint = LatLng(target.latitude, target.longitude);
-    final points = [courierPoint, destinationPoint];
+    final courierPoint = courier == null
+        ? null
+        : LatLng(courier.latitude, courier.longitude);
+    final destinationPoint = target == null
+        ? null
+        : LatLng(target.latitude, target.longitude);
+    final points = [
+      if (courierPoint != null) courierPoint,
+      if (destinationPoint != null) destinationPoint,
+    ];
     final pointsDiffer =
-        courier.latitude != target.latitude ||
-        courier.longitude != target.longitude;
-    final initialCenter = LatLng(
-      (courier.latitude + target.latitude) / 2,
-      (courier.longitude + target.longitude) / 2,
-    );
+        courier != null &&
+        target != null &&
+        (courier.latitude != target.latitude ||
+            courier.longitude != target.longitude);
+    final singlePoint = courierPoint ?? destinationPoint!;
+    final initialCenter = pointsDiffer
+        ? LatLng(
+            (courierPoint!.latitude + destinationPoint!.latitude) / 2,
+            (courierPoint!.longitude + destinationPoint!.longitude) / 2,
+          )
+        : singlePoint;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
@@ -77,7 +89,7 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
               mapController: _controller,
               options: MapOptions(
                 initialCenter: initialCenter,
-                initialZoom: 14,
+                initialZoom: pointsDiffer ? 14 : 15,
                 initialCameraFit: pointsDiffer
                     ? CameraFit.coordinates(
                         coordinates: points,
@@ -96,24 +108,26 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
                 ),
                 MarkerLayer(
                   markers: [
-                    Marker(
-                      point: courierPoint,
-                      width: 54,
-                      height: 54,
-                      child: const _MapPin(
-                        icon: Icons.delivery_dining_rounded,
-                        color: Color(0xFF087E75),
+                    if (courierPoint case final courierMarkerPoint?)
+                      Marker(
+                        point: courierMarkerPoint,
+                        width: 54,
+                        height: 54,
+                        child: const _MapPin(
+                          icon: Icons.delivery_dining_rounded,
+                          color: Color(0xFF087E75),
+                        ),
                       ),
-                    ),
-                    Marker(
-                      point: destinationPoint,
-                      width: 50,
-                      height: 50,
-                      child: const _MapPin(
-                        icon: Icons.location_on_rounded,
-                        color: Color(0xFFC2413B),
+                    if (destinationPoint case final destinationMarkerPoint?)
+                      Marker(
+                        point: destinationMarkerPoint,
+                        width: 50,
+                        height: 50,
+                        child: const _MapPin(
+                          icon: Icons.location_on_rounded,
+                          color: Color(0xFFC2413B),
+                        ),
                       ),
-                    ),
                   ],
                 ),
                 const SimpleAttributionWidget(
@@ -136,18 +150,26 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
                     ),
                   ],
                 ),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _LegendDot(color: Color(0xFF087E75)),
-                      SizedBox(width: 5),
-                      Text('Kurir'),
-                      SizedBox(width: 12),
-                      _LegendDot(color: Color(0xFFC2413B)),
-                      SizedBox(width: 5),
-                      Text('Tujuan'),
+                      if (courierPoint != null) ...[
+                        const _LegendDot(color: Color(0xFF087E75)),
+                        const SizedBox(width: 5),
+                        const Text('Kurir'),
+                      ],
+                      if (courierPoint != null && destinationPoint != null)
+                        const SizedBox(width: 12),
+                      if (destinationPoint != null) ...[
+                        const _LegendDot(color: Color(0xFFC2413B)),
+                        const SizedBox(width: 5),
+                        const Text('Tujuan'),
+                      ],
                     ],
                   ),
                 ),

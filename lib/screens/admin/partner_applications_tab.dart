@@ -35,14 +35,21 @@ class PartnerApplicationsTab extends StatefulWidget {
   });
 
   @override
-  State<PartnerApplicationsTab> createState() =>
-      _PartnerApplicationsTabState();
+  State<PartnerApplicationsTab> createState() => _PartnerApplicationsTabState();
 }
 
 class _PartnerApplicationsTabState extends State<PartnerApplicationsTab> {
   late final _applications = widget.services.admin.watchPartnerApplications();
+  final _searchController = TextEditingController();
   _ApplicationFilter _filter = _ApplicationFilter.pending;
+  String _query = '';
   String? _reviewingUid;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<void> _review(
     PartnerApplication application,
@@ -104,8 +111,8 @@ class _PartnerApplicationsTabState extends State<PartnerApplicationsTab> {
               Text(
                 status == PartnerApplicationStatus.approved
                     ? application.type == PartnerApplicationType.restaurant
-                        ? 'Akun restoran akan aktif. Data usaha masuk antrean tinjauan restoran sebelum tampil di katalog.'
-                        : 'Akun akan mendapat akses dashboard kurir.'
+                          ? 'Akun restoran akan aktif. Data usaha masuk antrean tinjauan restoran sebelum tampil di katalog.'
+                          : 'Akun akan mendapat akses dashboard kurir.'
                     : 'Pemohon dapat melihat catatan ini dan mengirim ulang datanya.',
               ),
               if (status == PartnerApplicationStatus.rejected) ...[
@@ -167,13 +174,25 @@ class _PartnerApplicationsTabState extends State<PartnerApplicationsTab> {
         }
 
         final applications = snapshot.data ?? const <PartnerApplication>[];
-        final visible = applications
-            .where(
-              (application) =>
-                  _filter.status == null ||
-                  application.status == _filter.status,
-            )
-            .toList();
+        final counts = {
+          for (final status in PartnerApplicationStatus.values)
+            status: applications
+                .where((application) => application.status == status)
+                .length,
+        };
+        final query = _query.trim().toLowerCase();
+        final visible = applications.where((application) {
+          final matchesStatus =
+              _filter.status == null || application.status == _filter.status;
+          final matchesQuery =
+              query.isEmpty ||
+              application.applicantName.toLowerCase().contains(query) ||
+              application.email.toLowerCase().contains(query) ||
+              (application.restaurantName?.toLowerCase().contains(query) ??
+                  false) ||
+              application.applicantUid.toLowerCase().contains(query);
+          return matchesStatus && matchesQuery;
+        }).toList();
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
@@ -190,13 +209,37 @@ class _PartnerApplicationsTabState extends State<PartnerApplicationsTab> {
               ),
             ),
             const SizedBox(height: 14),
+            TextField(
+              controller: _searchController,
+              onChanged: (value) => setState(() => _query = value),
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Cari nama, email, atau nama restoran',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Hapus pencarian',
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _query = '');
+                        },
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 12),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
                   for (final filter in _ApplicationFilter.values) ...[
                     ChoiceChip(
-                      label: Text(filter.label),
+                      label: Text(
+                        filter.status == null
+                            ? '${filter.label} (${applications.length})'
+                            : '${filter.label} (${counts[filter.status] ?? 0})',
+                      ),
                       selected: _filter == filter,
                       onSelected: (_) => setState(() => _filter = filter),
                     ),
@@ -216,14 +259,10 @@ class _PartnerApplicationsTabState extends State<PartnerApplicationsTab> {
                     application: application,
                     isReviewing: _reviewingUid == application.applicantUid,
                     isDisabled: _reviewingUid != null,
-                    onApprove: () => _review(
-                      application,
-                      PartnerApplicationStatus.approved,
-                    ),
-                    onReject: () => _review(
-                      application,
-                      PartnerApplicationStatus.rejected,
-                    ),
+                    onApprove: () =>
+                        _review(application, PartnerApplicationStatus.approved),
+                    onReject: () =>
+                        _review(application, PartnerApplicationStatus.rejected),
                   ),
                 ),
           ],
@@ -251,10 +290,8 @@ class _PartnerApplicationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isRestaurant =
-        application.type == PartnerApplicationType.restaurant;
-    final isPending =
-        application.status == PartnerApplicationStatus.pending;
+    final isRestaurant = application.type == PartnerApplicationType.restaurant;
+    final isPending = application.status == PartnerApplicationStatus.pending;
     final headline = isRestaurant
         ? application.restaurantName ?? 'Restoran'
         : application.applicantName;
@@ -280,7 +317,10 @@ class _PartnerApplicationCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(headline, style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        headline,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       Text(
                         isRestaurant ? 'Mitra restoran' : 'Mitra kurir',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -314,7 +354,8 @@ class _PartnerApplicationCard extends StatelessWidget {
               if (application.location case final location?)
                 _ApplicationDetail(
                   icon: Icons.my_location_rounded,
-                  value: '${location.latitude.toStringAsFixed(5)}, '
+                  value:
+                      '${location.latitude.toStringAsFixed(5)}, '
                       '${location.longitude.toStringAsFixed(5)}',
                 ),
             ],

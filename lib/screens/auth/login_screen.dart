@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../services/app_services.dart';
 import '../../services/auth_service.dart';
 import '../../utils/form_validators.dart';
 import '../../widgets/auth_header.dart';
@@ -8,12 +9,18 @@ import '../../widgets/fade_slide_in.dart';
 import '../../widgets/loading_button.dart';
 import '../../widgets/password_field.dart';
 import 'register_screen.dart';
+import 'partner_registration_screen.dart';
 
 // Layar masuk dengan email dan kata sandi
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
+  final AppServices? services;
 
-  const LoginScreen({super.key, required this.authService});
+  const LoginScreen({
+    super.key,
+    required this.authService,
+    this.services,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -54,6 +61,16 @@ class _LoginScreenState extends State<LoginScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => RegisterScreen(authService: widget.authService),
+      ),
+    );
+  }
+
+  void _openPartnerRegistration() {
+    final services = widget.services;
+    if (services == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PartnerRegistrationScreen(services: services),
       ),
     );
   }
@@ -118,6 +135,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text(
                       'Belum punya akun? Daftar sebagai pemesan',
                     ),
+                  ),
+                ),
+                FadeSlideIn(
+                  index: 5,
+                  child: TextButton.icon(
+                    onPressed: _isLoading || widget.services == null
+                        ? null
+                        : _openPartnerRegistration,
+                    icon: const Icon(Icons.handshake_outlined),
+                    label: const Text('Daftar sebagai mitra restoran atau kurir'),
                   ),
                 ),
               ],

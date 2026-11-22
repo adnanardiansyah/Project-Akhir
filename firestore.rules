@@ -18,6 +18,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/orders/$(orderId);
     }
 
+    function partnerApplicationPath(userId) {
+      return /databases/$(database)/documents/partnerApplications/$(userId);
+    }
+
     function isCustomer() {
       return signedIn()
         && exists(userPath(request.auth.uid))
@@ -87,6 +91,113 @@ service cloud.firestore {
         && request.resource.data.displayName is string
         && request.resource.data.displayName.size() > 0
         && request.resource.data.displayName.size() <= 100;
+    }
+
+    function validPendingPartnerApplication(userId) {
+      let data = request.resource.data;
+      let profile = getAfter(userPath(userId)).data;
+      return signedIn()
+        && request.auth.uid == userId
+        && existsAfter(userPath(userId))
+        && profile.role == 'customer'
+        && data.keys().hasAll([
+          'applicantUid', 'applicationType', 'status', 'applicantName',
+          'email', 'phone', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'applicantUid', 'applicationType', 'status', 'applicantName',
+          'email', 'phone', 'createdAt', 'restaurantName', 'address',
+          'location'
+        ])
+        && data.applicantUid == userId
+        && data.applicantName == profile.displayName
+        && data.email == request.auth.token.email
+        && data.phone is string
+        && data.phone.size() >= 9
+        && data.phone.size() <= 25
+        && data.status == 'pending'
+        && data.createdAt == request.time
+        && (
+          (data.applicationType == 'restaurant'
+            && data.keys().hasAll(['restaurantName', 'address', 'location'])
+            && data.restaurantName is string
+            && data.restaurantName.size() > 0
+            && data.restaurantName.size() <= 120
+            && data.address is string
+            && data.address.size() > 0
+            && data.address.size() <= 300
+            && data.location is latlng)
+          || (data.applicationType == 'courier'
+            && !data.keys().hasAny(['restaurantName', 'address', 'location']))
+        );
+    }
+
+    function validAdminPartnerApplicationReview() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isAdmin()
+        && resource.data.status == 'pending'
+        && changed.hasOnly([
+          'status', 'reviewedBy', 'reviewedAt', 'rejectionReason'
+        ])
+        && changed.hasAll([
+          'status', 'reviewedBy', 'reviewedAt', 'rejectionReason'
+        ])
+        && request.resource.data.status in ['approved', 'rejected']
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time
+        && (request.resource.data.status == 'approved'
+          ? request.resource.data.rejectionReason == null
+          : request.resource.data.rejectionReason is string
+            && request.resource.data.rejectionReason.size() <= 300);
+    }
+
+    function validAdminPartnerRoleGrant(userId) {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let application = getAfter(partnerApplicationPath(userId)).data;
+      return isAdmin()
+        && resource.data.role == 'customer'
+        && request.resource.data.displayName == resource.data.displayName
+        && existsAfter(partnerApplicationPath(userId))
+        && application.applicantUid == userId
+        && application.applicantName == resource.data.displayName
+        && application.status == 'approved'
+        && application.reviewedBy == request.auth.uid
+        && (
+          (application.applicationType == 'courier'
+            && request.resource.data.role == 'courier'
+            && changed.hasOnly(['role']))
+          || (application.applicationType == 'restaurant'
+            && request.resource.data.role == 'restaurant'
+            && request.resource.data.restaurantId == userId
+            && changed.hasOnly(['role', 'restaurantId'])
+            && existsAfter(restaurantPath(userId))
+            && getAfter(restaurantPath(userId)).data.ownerUid == userId)
+        );
+    }
+
+    function validPartnerRestaurantCreate(restaurantId) {
+      let application = getAfter(partnerApplicationPath(restaurantId)).data;
+      let data = request.resource.data;
+      return isAdmin()
+        && existsAfter(partnerApplicationPath(restaurantId))
+        && application.applicationType == 'restaurant'
+        && application.status == 'approved'
+        && application.reviewedBy == request.auth.uid
+        && data.keys().hasAll([
+          'name', 'address', 'location', 'ownerUid', 'reviewStatus',
+          'reviewedBy', 'reviewedAt'
+        ])
+        && data.keys().hasOnly([
+          'name', 'address', 'location', 'ownerUid', 'reviewStatus',
+          'reviewedBy', 'reviewedAt'
+        ])
+        && data.name == application.restaurantName
+        && data.address == application.address
+        && data.location == application.location
+        && data.ownerUid == restaurantId
+        && data.reviewStatus == 'pending'
+        && data.reviewedBy == request.auth.uid
+        && data.reviewedAt == request.time;
     }
 
     function validOrderCreate() {
@@ -238,12 +349,29 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.auth.uid == userId
         && validCustomerProfile();
-      allow update: if signedIn()
+      allow update: if (signedIn()
         && request.auth.uid == userId
         && changedOnly(['displayName'])
         && request.resource.data.displayName is string
         && request.resource.data.displayName.size() > 0
-        && request.resource.data.displayName.size() <= 100;
+        && request.resource.data.displayName.size() <= 100)
+        || validAdminPartnerRoleGrant(userId);
+      allow delete: if false;
+    }
+
+    match /partnerApplications/{applicationId} {
+      allow get: if isAdmin()
+        || (signedIn() && request.auth.uid == applicationId);
+      allow list: if isAdmin();
+      allow create: if !exists(partnerApplicationPath(applicationId))
+        && validPendingPartnerApplication(applicationId);
+      allow update: if (isAdmin() && validAdminPartnerApplicationReview())
+        || (isCustomer()
+          && request.auth.uid == applicationId
+          && resource.data.status == 'rejected'
+          && request.resource.data.applicationType
+            == resource.data.applicationType
+          && validPendingPartnerApplication(applicationId));
       allow delete: if false;
     }
 
@@ -251,7 +379,8 @@ service cloud.firestore {
       allow get, list: if isAdmin()
         || isRestaurantOperator(restaurantId)
         || (signedIn() && resource.data.reviewStatus == 'approved');
-      allow create, delete: if false;
+      allow create: if validPartnerRestaurantCreate(restaurantId);
+      allow delete: if false;
       allow update: if validAdminRestaurantReview();
 
       match /menuItems/{menuItemId} {

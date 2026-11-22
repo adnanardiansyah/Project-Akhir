@@ -5,9 +5,9 @@ Mengikuti `PRD.md` (keputusan K1 sampai K5, usulan U1 sampai U6).
 ## 1. Gambaran
 
 ```
-Perangkat Android (satu aplikasi Flutter, tiga peran)
+Perangkat Android (satu aplikasi Flutter, empat peran)
  ├─ Firebase Authentication   → login, identitas pengguna
- ├─ Cloud Firestore           → users, restaurants, menuItems, orders, messages (realtime)
+ ├─ Cloud Firestore           → users, partnerApplications, restaurants, menuItems, orders, messages (realtime)
  ├─ GPS perangkat             → daftar resto dan titik tujuan checkout
  └─ OpenRouteService (HTTPS)  → jarak rute ke resto / titik tujuan pesanan
 ```
@@ -57,9 +57,24 @@ Aturan: logika bisnis dan akses data di `services/` dan `models/` (bisa dites ta
 
 ```
 users/{uid}
-  role: "customer" | "restaurant" | "admin"
+  role: "customer" | "restaurant" | "courier" | "admin"
   displayName: string
   restaurantId: string?            // hanya untuk role restaurant
+
+partnerApplications/{uid}
+  applicantUid: string
+  applicationType: "restaurant" | "courier"
+  status: "pending" | "approved" | "rejected"
+  applicantName: string
+  email: string
+  phone: string
+  restaurantName: string?          // wajib untuk pengajuan restaurant
+  address: string?                 // wajib untuk pengajuan restaurant
+  location: GeoPoint?              // wajib untuk pengajuan restaurant
+  createdAt: timestamp
+  reviewedBy: string?              // admin yang memutuskan
+  reviewedAt: timestamp?
+  rejectionReason: string?         // catatan admin jika ditolak
 
 restaurants/{restaurantId}
   name: string
@@ -106,14 +121,14 @@ Alasan `items` menyalin nama dan harga: harga di pesanan tidak berubah kalau men
 
 ## 5. Alur data utama
 
-1. **Login:** `auth_service` masuk, lalu baca `users/{uid}.role`; `app.dart` membuka layar pemesan, resto, atau dashboard admin. Akun admin dibuat manual oleh pengelola, tidak lewat pendaftaran aplikasi.
+1. **Login dan pengajuan mitra:** `auth_service` membaca `users/{uid}.role`; `app.dart` membuka layar sesuai peran. Pendaftaran publik membuat role awal `customer`. Pemohon dapat mengirim pengajuan restoran atau kurir dari UI. Admin menyetujui atau menolak pengajuan pada tab **Pengajuan**; transaksi admin mengubah role dan status aplikasi secara bersamaan. Untuk restoran, transaksi juga membuat `restaurants/{uid}` dengan `reviewStatus: "pending"`; admin meninjau listing secara terpisah pada tab **Resto** sebelum restoran tampil ke pemesan. Akun admin tetap dibuat manual oleh pengelola.
 2. **Daftar resto dan menu (M1):** `StreamBuilder` pada `restaurants` dan `menuItems`.
 3. **Keranjang dan pesanan:** `cart_controller` menyimpan item di memori; pemesan dapat mengambil GPS terbaru sebagai titik tujuan tetap. "Buat Pesanan" menulis satu dokumen `orders` dengan status `pending` dan salinan koordinat tujuan bila tersedia. Keranjang terkunci sampai server mengonfirmasi atau menolak; setelah 10 detik UI memberi tahu bahwa status masih menunggu.
 4. **Chat (M2):** `chat_service` menulis ke `orders/{id}/messages`; kedua sisi mendengarkan koleksi yang sama diurutkan `createdAt`, sehingga pesan muncul tanpa refresh. Pesan lokal ditandai menunggu sampai server mengonfirmasi; bila write ditolak, teks dikembalikan ke kolom.
 5. **Konfirmasi dan batal:** resto mengubah `status` ke `confirmed` atau `cancelled`; pemesan hanya boleh membatalkan sebelum `paid`.
 6. **Pembayaran simulasi (M3):** pemesan memilih metode, `status` menjadi `paid`, `paymentMethod` dan `paidAt` terisi. Tidak ada uang sungguhan.
 7. **Jarak rute (M4):** daftar resto menghitung dari GPS terkini pemesan ke resto. Detail pesanan menghitung dari lokasi resto ke `deliveryLocation` yang tersimpan saat checkout, sehingga tujuan tidak bergeser saat pemesan berpindah. Tombol perbarui pada daftar mengambil GPS baru. `route_distance_service` memanggil OpenRouteService; hasil meter diubah ke km oleh `format_distance`.
-8. **Admin:** ringkasan menghitung status resto dan pesanan dari Firestore. Admin mencari/filter resto, lalu menyetujui, menolak, atau menangguhkan; admin juga memantau pesanan tanpa bisa membaca chat pribadi.
+8. **Admin:** ringkasan menghitung status resto dan pesanan dari Firestore. Admin meninjau pengajuan mitra, mengaktifkan role setelah persetujuan, mencari/filter data resto, menyetujui atau menangguhkan listing, dan memantau pesanan tanpa bisa membaca chat pribadi.
 
 ## 6. Integrasi OpenRouteService
 
@@ -139,12 +154,13 @@ Jika GPS mati atau izinnya ditolak, label memberi petunjuk untuk mengaktifkan GP
 ## 7. Keamanan data (aturan Firestore)
 
 Prinsip yang ditulis di `firestore.rules`:
-- Pengguna hanya membaca profilnya sendiri dan hanya boleh mengubah `displayName`; pendaftaran aplikasi selalu membuat `customer`. Akun `restaurant` dan `admin` dibuat manual, jadi pengguna tidak dapat menaikkan perannya sendiri.
-- `restaurants` dan `menuItems`: pemesan hanya membaca resto berstatus `approved`; operator resto dapat membaca restonya sendiri; admin membaca seluruh resto. Hanya admin dapat mengubah field tinjauan (`reviewStatus`, `reviewedBy`, `reviewedAt`); pembuatan data usaha tetap lewat Console.
+- Pengguna hanya membaca profilnya sendiri dan hanya boleh mengubah `displayName`; pendaftaran aplikasi selalu membuat `customer`. Role `restaurant` dan `courier` hanya dapat diaktifkan admin setelah pengajuan disetujui. Akun `admin` tetap dibuat manual, jadi pengguna tidak dapat menaikkan perannya sendiri.
+- Pemohon hanya dapat membuat atau membaca pengajuan miliknya sendiri. Hanya admin dapat membaca daftar pengajuan dan memutuskan status. Role restoran/kurir diubah oleh transaksi admin hanya bila dokumen pengajuan yang sama disetujui; pembuatan dokumen restoran juga dibatasi pada transaksi tersebut.
+- `restaurants` dan `menuItems`: pemesan hanya membaca resto berstatus `approved`; operator resto dapat membaca restonya sendiri; admin membaca seluruh resto. Hanya admin dapat mengubah field tinjauan (`reviewStatus`, `reviewedBy`, `reviewedAt`). Dokumen resto dibuat oleh transaksi persetujuan pengajuan admin; data menu masih disiapkan lewat Console.
 - `orders`: pemesan dan operator terkait dapat membaca pesanan mereka; admin dapat membaca untuk monitoring. Hanya pemesan dapat membuat pesanan untuk resto yang disetujui. Admin tidak dapat mengubah status transaksi.
 - `messages`: hanya pemesan dan resto pada pesanan yang sama yang boleh membaca dan menambah pesan; admin tidak mendapat akses chat. `senderUid` dan `senderRole` harus cocok dengan akun login; pesan tidak dapat diubah atau dihapus.
 
-Rules sumber ada di `firestore.rules`, ditautkan dari `firebase.json`, dan proyek default ditetapkan di `.firebaserc`. Rules lokal ini belum diuji atau dideploy dari repo, dan belum diverifikasi terhadap aturan yang mungkin sudah terpasang di Firebase Console. Buat pengguna di Firebase Authentication, lalu buat `users/{uid}` lewat Console dengan `role: "admin"` dan `displayName`; pendaftaran aplikasi tidak bisa membuat admin. Dokumen resto lama tanpa `reviewStatus` dianggap `pending`; admin harus meninjau dan menyetujuinya agar muncul di katalog. Uji tiga peran dan akses chat sebelum rules diterapkan ke proyek Firebase.
+Rules sumber ada di `firestore.rules`, ditautkan dari `firebase.json`, dan proyek default ditetapkan di `.firebaserc`. Rules lokal ini belum diuji atau dideploy dari repo, dan belum diverifikasi terhadap aturan yang mungkin sudah terpasang di Firebase Console. Buat pengguna di Firebase Authentication, lalu buat `users/{uid}` lewat Console dengan `role: "admin"` dan `displayName`; pendaftaran aplikasi tidak bisa membuat admin. Dokumen resto lama tanpa `reviewStatus` dianggap `pending`; admin harus meninjau dan menyetujuinya agar muncul di katalog. Uji empat peran, pengajuan mitra, dan akses chat sebelum rules diterapkan ke proyek Firebase.
 
 ## 8. Strategi tes
 

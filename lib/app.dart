@@ -6,8 +6,10 @@ import 'package:flutter/services.dart';
 
 import 'controllers/cart_controller.dart';
 import 'models/app_user.dart';
+import 'models/partner_application.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/partner_application_status_screen.dart';
 import 'screens/customer/restaurant_list_screen.dart';
 import 'screens/courier/courier_dashboard_screen.dart';
 import 'screens/restaurant/incoming_orders_screen.dart';
@@ -101,6 +103,7 @@ class _RoleRouterState extends State<_RoleRouter> {
       return LoginScreen(
         key: const ValueKey('login'),
         authService: widget.services.auth,
+        services: widget.services,
       );
     }
     return _ProfileGate(
@@ -180,7 +183,7 @@ class _ProfileGateState extends State<_ProfileGate> {
       );
     }
     return switch (appUser.role) {
-      UserRole.customer => RestaurantListScreen(
+      UserRole.customer => _CustomerHomeGate(
         key: const ValueKey('customer-home'),
         user: appUser,
         services: widget.services,
@@ -202,6 +205,42 @@ class _ProfileGateState extends State<_ProfileGate> {
         services: widget.services,
       ),
     };
+  }
+}
+
+class _CustomerHomeGate extends StatelessWidget {
+  final AppUser user;
+  final AppServices services;
+  final CartController cart;
+
+  const _CustomerHomeGate({
+    super.key,
+    required this.user,
+    required this.services,
+    required this.cart,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<PartnerApplication?>(
+      stream: services.partnerApplications.watchApplication(user.uid),
+      builder: (context, snapshot) {
+        final application = snapshot.data;
+        if (application != null) {
+          return PartnerApplicationStatusScreen(
+            key: const ValueKey('partner-application-status'),
+            user: user,
+            application: application,
+            services: services,
+          );
+        }
+        return RestaurantListScreen(
+          user: user,
+          services: services,
+          cart: cart,
+        );
+      },
+    );
   }
 }
 

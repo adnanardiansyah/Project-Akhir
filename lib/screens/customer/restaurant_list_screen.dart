@@ -4,6 +4,7 @@ import '../../controllers/cart_controller.dart';
 import '../../models/app_user.dart';
 import '../../models/restaurant.dart';
 import '../../services/app_services.dart';
+import '../auth/partner_registration_screen.dart';
 import '../../widgets/cart_bar.dart';
 import '../../widgets/logout_button.dart';
 import '../../widgets/pressable_card.dart';
@@ -46,6 +47,14 @@ class RestaurantListScreen extends StatelessWidget {
             icon: const Icon(Icons.receipt_long_rounded),
             onPressed: () =>
                 _push(context, MyOrdersScreen(user: user, services: services)),
+          ),
+          IconButton(
+            tooltip: 'Daftar sebagai mitra',
+            icon: const Icon(Icons.handshake_outlined),
+            onPressed: () => _push(
+              context,
+              PartnerRegistrationScreen(services: services, applicant: user),
+            ),
           ),
           LogoutButton(authService: services.auth),
         ],

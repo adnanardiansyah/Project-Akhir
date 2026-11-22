@@ -3,6 +3,7 @@ import 'admin_service.dart';
 import 'chat_service.dart';
 import 'location_service.dart';
 import 'order_service.dart';
+import 'partner_application_service.dart';
 import 'restaurant_service.dart';
 import 'route_distance_service.dart';
 
@@ -15,6 +16,7 @@ class AppServices {
   final ChatService chat;
   final LocationService location;
   final RouteDistanceService routeDistance;
+  final PartnerApplicationService partnerApplications;
 
   const AppServices({
     required this.auth,
@@ -24,5 +26,6 @@ class AppServices {
     required this.chat,
     required this.location,
     required this.routeDistance,
+    this.partnerApplications = const PartnerApplicationService(),
   });
 }

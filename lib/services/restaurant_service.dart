@@ -28,6 +28,18 @@ class RestaurantService {
         );
   }
 
+  // Memantau data restoran dan status tinjauan satu akun.
+  Stream<Restaurant?> watchRestaurant(String restaurantId) {
+    return _firestore
+        .collection('restaurants')
+        .doc(restaurantId)
+        .snapshots()
+        .map((snapshot) {
+          final data = snapshot.data();
+          return data == null ? null : Restaurant.fromMap(snapshot.id, data);
+        });
+  }
+
   // Membaca satu resto sekali; null bila tidak ada atau tidak valid
   Future<Restaurant?> fetchRestaurant(String restaurantId) async {
     final doc = await _firestore

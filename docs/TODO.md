@@ -35,8 +35,8 @@ Mengikuti `PRD.md` dan `ARSITEKTUR.md`. Jadwal di bawah adalah **usulan** (hari 
 - Commit: `chore: init flutter project and firebase config`
 
 ### L1 — Login dan peran (19 Nov) — FR-7
-- Pekerjaan: daftar pemesan, login, logout, pengalihan layar sesuai `role`; akun operator restoran proyek dibuat lewat Console.
-- Tes: daftar lalu login lalu logout; akun resto masuk ke layar resto; tes unit validasi form.
+- Pekerjaan: daftar pemesan, login, logout, pengalihan layar sesuai `role`; sediakan UI pengajuan restoran/kurir dan status persetujuan admin. Akun admin tetap dibuat lewat Console.
+- Tes: daftar lalu login lalu logout; pengajuan restoran/kurir tetap berstatus pemesan sampai admin menyetujui; persetujuan mengalihkan role; tes unit validasi form.
 - Commit: `feat: add auth with customer and restaurant roles`
 
 ### L2 — Resto dan menu (20 Nov) — M1, FR-1
@@ -71,7 +71,7 @@ Mengikuti `PRD.md` dan `ARSITEKTUR.md`. Jadwal di bawah adalah **usulan** (hari 
 
 ### L8 — Keamanan dan kondisi error (26 Nov) — M5
 - Pekerjaan: rules sumber ada di `firestore.rules` dan `firebase.json`; uji di emulator/Rules Playground sebelum deploy; siapkan profil admin manual dan tinjau resto lama yang berstatus `pending`.
-- Tes: akun A tidak bisa membaca pesanan/chat akun B; admin tidak bisa membaca chat; pengguna tidak bisa mengubah `role` sendiri; resto tidak bisa membaca pesanan resto lain; hanya admin dapat mengubah status tinjauan resto; hanya pihak terkait dapat mengonfirmasi, membatalkan, atau membayar.
+- Tes: akun A tidak bisa membaca pesanan/chat akun B; admin tidak bisa membaca chat; pengguna tidak bisa mengubah `role` sendiri; hanya admin dapat memutuskan pengajuan dan tinjauan resto; resto tidak bisa membaca pesanan resto lain; hanya pihak terkait dapat mengonfirmasi, membatalkan, atau membayar.
 - Commit: `feat: add firestore security rules`
 
 ### L9 — Pengujian menyeluruh (27–28 Nov)

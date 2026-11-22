@@ -21,10 +21,13 @@ samples, guidance on mobile development, and a full API reference.
 Tracking memakai GPS ponsel kurir, Firestore real-time, dan peta OpenStreetMap.
 Untuk memakai alur ini:
 
-1. Buat akun kurir di Firebase Authentication dengan metode Email/Password.
-2. Buat `users/{UID}` di Firestore dengan field string `role: courier` dan
-   `displayName` berisi nama kurir.
-3. Terapkan aturan keamanan dari `firestore.rules` ke Cloud Firestore.
+1. Dari layar masuk, pilih **Daftar sebagai mitra restoran atau kurir** lalu
+   kirim pengajuan. Pemohon dapat memantau status dan memperbaiki pengajuan
+   yang ditolak.
+2. Dari folder proyek, terapkan aturan keamanan terbaru ke project yang benar:
+   `firebase deploy --only firestore:rules --project food-order-app-pnl`.
+3. Admin membuka tab **Pengajuan** dan menyetujui akun kurir. Role `courier`
+   diaktifkan oleh transaksi admin setelah pengajuan disetujui.
 4. Pemesan wajib menyimpan titik GPS saat checkout agar kurir memiliki tujuan.
 5. Setelah resto mengonfirmasi dan pemesan menyelesaikan pembayaran simulasi,
    admin buka tab **Pesanan** dan pilih **Tugaskan kurir**.
@@ -34,3 +37,13 @@ Untuk memakai alur ini:
 
 Lokasi dikirim selama layar aplikasi kurir terbuka. Jika aplikasi ditutup,
 kurir perlu membuka lagi aplikasi dan menekan **Lanjutkan berbagi lokasi**.
+
+## Pendaftaran mitra
+
+Pendaftaran restoran dan kurir tersedia dari layar masuk. Pemohon membuat akun
+email/kata sandi dan mengirim data pengajuan; role akun tetap `customer` sampai
+admin menyetujui pengajuan. Pengajuan restoran memerlukan nama usaha, alamat,
+nomor telepon, dan titik lokasi GPS. Setelah admin mengaktifkan akun restoran,
+listing masih berstatus `pending` sampai ditinjau di tab **Resto**. Menu restoran
+baru masih perlu dimasukkan lewat Firestore Console karena aplikasi belum
+menyediakan pengelolaan menu.

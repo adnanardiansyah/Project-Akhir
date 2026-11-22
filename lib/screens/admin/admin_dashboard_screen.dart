@@ -5,6 +5,7 @@ import '../../models/order.dart';
 import '../../models/restaurant.dart';
 import '../../services/app_services.dart';
 import '../../theme/app_theme.dart';
+import 'partner_applications_tab.dart';
 import '../../utils/format_date_time.dart';
 import '../../utils/format_rupiah.dart';
 import '../../widgets/error_snack_bar.dart';
@@ -28,16 +29,18 @@ class AdminDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Panel Admin'),
           actions: [LogoutButton(authService: services.auth)],
           bottom: const TabBar(
+            isScrollable: true,
             tabs: [
               Tab(icon: Icon(Icons.dashboard_outlined), text: 'Ringkasan'),
               Tab(icon: Icon(Icons.storefront_outlined), text: 'Resto'),
               Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Pesanan'),
+              Tab(icon: Icon(Icons.group_add_outlined), text: 'Pengajuan'),
             ],
           ),
         ),
@@ -46,6 +49,7 @@ class AdminDashboardScreen extends StatelessWidget {
             _AdminOverviewTab(user: user, services: services),
             _RestaurantReviewTab(user: user, services: services),
             _OrderMonitoringTab(services: services),
+            PartnerApplicationsTab(user: user, services: services),
           ],
         ),
       ),

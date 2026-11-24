@@ -39,8 +39,10 @@ class OrderService {
         'total': orderTotal(items),
         'status': OrderStatus.pending.name,
         'paymentMethod': null,
+        'paymentStatus': PaymentStatus.unpaid.name,
         'createdAt': FieldValue.serverTimestamp(),
         'paidAt': null,
+        'codCollectedByUid': null,
       }),
     );
     return doc.id;
@@ -57,14 +59,52 @@ class OrderService {
 
   // Bayar simulasi lewat transaksi: hanya dari confirmed, status dan data bayar ditulis sekaligus
   Future<void> payOrder(String orderId, PaymentMethod method) {
-    return _transition(orderId, OrderStatus.paid, {
-      'status': OrderStatus.paid.name,
-      'paymentMethod': method.name,
-      'paidAt': FieldValue.serverTimestamp(),
+    if (method == PaymentMethod.cod) {
+      throw ArgumentError('COD tidak dibayar di layar pembayaran');
+    }
+    final ref = _orders.doc(orderId);
+    return _firestore.runTransaction((transaction) async {
+      final data = (await transaction.get(ref)).data();
+      if (data == null ||
+          data['status'] != OrderStatus.confirmed.name ||
+          data['paymentMethod'] != null ||
+          data['paymentStatus'] == PaymentStatus.paid.name ||
+          data['deliveryStatus'] != null) {
+        throw StateError('Pembayaran hanya bisa pada pesanan dikonfirmasi.');
+      }
+      checkTransition(OrderStatus.confirmed, OrderStatus.paid);
+      transaction.update(ref, {
+        'status': OrderStatus.paid.name,
+        'paymentMethod': method.name,
+        'paymentStatus': PaymentStatus.paid.name,
+        'paidAt': FieldValue.serverTimestamp(),
+      });
     });
   }
 
-  // Pesanan dibayar hanya bisa ditugaskan oleh admin.
+  // Memilih COD tidak mengubah status; uang diterima kurir saat pengantaran selesai
+  Future<void> chooseCodPayment(String orderId) {
+    final ref = _orders.doc(orderId);
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(ref);
+      final data = snapshot.data();
+      if (data == null ||
+          data['status'] != OrderStatus.confirmed.name ||
+          data['paymentMethod'] != null ||
+          data['paymentStatus'] == PaymentStatus.paid.name) {
+        throw StateError(
+          'Metode COD hanya bisa dipilih pada pesanan dikonfirmasi.',
+        );
+      }
+      transaction.update(ref, {
+        'paymentMethod': PaymentMethod.cod.name,
+        'paymentStatus': PaymentStatus.unpaid.name,
+        'paidAt': null,
+      });
+    });
+  }
+
+  // Admin menugaskan pesanan lunas atau COD yang siap dikirim.
   Future<void> assignCourier({
     required String orderId,
     required String courierUid,
@@ -84,10 +124,16 @@ class OrderService {
     return _firestore.runTransaction((transaction) async {
       final snapshot = await transaction.get(ref);
       final data = snapshot.data();
+      final readyForCourier =
+          data != null &&
+          (data['status'] == OrderStatus.paid.name ||
+              (isCodMethodName(data['paymentMethod'] as String?) &&
+                  data['status'] == OrderStatus.confirmed.name &&
+                  data['paymentStatus'] != PaymentStatus.paid.name));
       if (data == null ||
           data['assignedCourierUid'] != courierUid ||
           data['deliveryStatus'] != DeliveryStatus.assigned.name ||
-          data['status'] != OrderStatus.paid.name) {
+          !readyForCourier) {
         throw StateError('Pesanan ini belum siap untuk diantar.');
       }
       transaction.update(ref, {
@@ -115,6 +161,59 @@ class OrderService {
           data['assignedCourierUid'] != courierUid ||
           data['deliveryStatus'] != DeliveryStatus.inTransit.name) {
         throw StateError('Pengantaran ini tidak sedang berjalan.');
+      }
+      if (isCodMethodName(data['paymentMethod'] as String?)) {
+        throw StateError(
+          'COD harus diselesaikan lewat tombol terima pembayaran.',
+        );
+      }
+      transaction.update(ref, {
+        'deliveryStatus': DeliveryStatus.delivered.name,
+        'deliveredAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  // COD: kurir menandai selesai sekaligus mencatat uang yang diterima.
+  Future<void> collectCodPayment(String orderId, String courierUid) {
+    final ref = _orders.doc(orderId);
+    return _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(ref);
+      final data = snapshot.data();
+      if (data == null ||
+          data['assignedCourierUid'] != courierUid ||
+          data['deliveryStatus'] != DeliveryStatus.inTransit.name ||
+          !isCodMethodName(data['paymentMethod'] as String?) ||
+          data['paymentStatus'] == PaymentStatus.paid.name) {
+        throw StateError('Pembayaran COD ini tidak siap diterima.');
+      }
+      transaction.update(ref, {
+        'deliveryStatus': DeliveryStatus.delivered.name,
+        'deliveredAt': FieldValue.serverTimestamp(),
+        'status': OrderStatus.paid.name,
+        'paymentStatus': PaymentStatus.paid.name,
+        'paymentMethod': PaymentMethod.cod.name,
+        'paidAt': FieldValue.serverTimestamp(),
+        'codCollectedByUid': courierUid,
+      });
+    });
+  }
+
+  // Deteksi tiba otomatis memakai transaksi yang sama dengan penyelesaian manual.
+  Future<void> autoArrive(String orderId, String courierUid) {
+    final ref = _orders.doc(orderId);
+    return _firestore.runTransaction((transaction) async {
+      final data = (await transaction.get(ref)).data();
+      if (data == null ||
+          data['assignedCourierUid'] != courierUid ||
+          data['deliveryStatus'] != DeliveryStatus.inTransit.name) {
+        throw StateError('Pengantaran ini tidak sedang berjalan.');
+      }
+      if (isCodMethodName(data['paymentMethod'] as String?)) {
+        throw StateError('COD wajib dikonfirmasi kurir setelah uang diterima.');
+      }
+      if (data['status'] != OrderStatus.paid.name) {
+        throw StateError('Pesanan belum lunas.');
       }
       transaction.update(ref, {
         'deliveryStatus': DeliveryStatus.delivered.name,

@@ -21,6 +21,7 @@ class StateMessage extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     return Center(
       child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(32),
         child: FadeSlideIn(
           child: Column(

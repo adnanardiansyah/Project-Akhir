@@ -8,12 +8,14 @@ class LoadingButton extends StatelessWidget {
   final bool isLoading;
   // Null membuat tombol nonaktif, misalnya saat proses lain sedang berjalan
   final VoidCallback? onPressed;
+  final IconData? icon;
 
   const LoadingButton({
     super.key,
     required this.label,
     required this.isLoading,
     required this.onPressed,
+    this.icon,
   });
 
   @override
@@ -28,7 +30,23 @@ class LoadingButton extends StatelessWidget {
                 dimension: 22,
                 child: CircularProgressIndicator(strokeWidth: 2.4),
               )
-            : Text(label, key: const ValueKey('label')),
+            : (icon == null
+                  ? Text(label, key: const ValueKey('label'))
+                  : Row(
+                      key: const ValueKey('label-with-icon'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, size: 18),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    )),
       ),
     );
   }

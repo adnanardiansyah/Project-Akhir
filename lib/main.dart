@@ -9,6 +9,7 @@ import 'services/auth_service.dart';
 import 'services/chat_service.dart';
 import 'services/location_service.dart';
 import 'services/order_service.dart';
+import 'services/partner_application_service.dart';
 import 'services/restaurant_service.dart';
 import 'services/route_distance_service.dart';
 
@@ -26,6 +27,7 @@ Future<void> main() async {
         chat: ChatService(),
         location: LocationService(),
         routeDistance: RouteDistanceService(),
+        partnerApplications: const PartnerApplicationService(),
       ),
     ),
   );

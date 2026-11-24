@@ -73,7 +73,16 @@ service cloud.firestore {
         .hasOnly(fields);
     }
 
-    function validAdminRestaurantReview() {
+    // Lunas atau COD yang siap dikirim (belum diambil kurir).
+  function isReadyForCourier(order) {
+    return order.status == 'paid'
+      || (order.paymentMethod == 'cod'
+        && order.status == 'confirmed'
+        && (!order.keys().hasAny(['paymentStatus'])
+          || order.paymentStatus == 'unpaid'));
+  }
+
+  function validAdminRestaurantReview() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       return isAdmin()
         && changed.hasOnly(['reviewStatus', 'reviewedBy', 'reviewedAt'])
@@ -205,12 +214,14 @@ service cloud.firestore {
         && request.resource.data.keys().hasAll([
           'customerUid', 'customerName', 'restaurantId', 'restaurantName',
           'deliveryLocation',
-          'items', 'total', 'status', 'paymentMethod', 'createdAt', 'paidAt'
+          'items', 'total', 'status', 'paymentMethod',
+          'createdAt', 'paidAt'
         ])
         && request.resource.data.keys().hasOnly([
           'customerUid', 'customerName', 'restaurantId', 'restaurantName',
           'deliveryLocation',
-          'items', 'total', 'status', 'paymentMethod', 'createdAt', 'paidAt'
+          'items', 'total', 'status', 'paymentMethod', 'paymentStatus',
+          'createdAt', 'paidAt', 'codCollectedByUid'
         ])
         && request.resource.data.customerUid == request.auth.uid
         && request.resource.data.customerName is string
@@ -230,8 +241,12 @@ service cloud.firestore {
         && request.resource.data.total >= 0
         && request.resource.data.status == 'pending'
         && request.resource.data.paymentMethod == null
+        && (!request.resource.data.keys().hasAny(['paymentStatus'])
+          || request.resource.data.paymentStatus == 'unpaid')
         && request.resource.data.createdAt == request.time
-        && request.resource.data.paidAt == null;
+        && request.resource.data.paidAt == null
+        && (!request.resource.data.keys().hasAny(['codCollectedByUid'])
+          || request.resource.data.codCollectedByUid == null);
     }
 
     function canConfirmOrder() {
@@ -245,26 +260,51 @@ service cloud.firestore {
       return (isOrderCustomer(resource.data)
           || isRestaurantOperator(resource.data.restaurantId))
         && resource.data.status in ['pending', 'confirmed']
+        && (!resource.data.keys().hasAny(['deliveryStatus'])
+          || resource.data.deliveryStatus == null)
         && request.resource.data.status == 'cancelled'
         && changedOnly(['status']);
+    }
+
+    // Memilih COD tidak melunasi pesanan; kurir yang akan menerima uangnya.
+    function canChooseCodPayment() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return isOrderCustomer(resource.data)
+        && resource.data.status == 'confirmed'
+        && resource.data.paymentMethod == null
+        && (!resource.data.keys().hasAny(['paymentStatus'])
+          || resource.data.paymentStatus == 'unpaid')
+        && request.resource.data.paymentMethod == 'cod'
+        && request.resource.data.paymentStatus == 'unpaid'
+        && request.resource.data.paidAt == null
+        && changed.hasOnly(['paymentMethod', 'paymentStatus', 'paidAt'])
+        && changed.hasAll(['paymentMethod']);
     }
 
     function canPayOrder() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       return isOrderCustomer(resource.data)
         && resource.data.status == 'confirmed'
+        && resource.data.paymentMethod == null
+        && (!resource.data.keys().hasAny(['deliveryStatus'])
+          || resource.data.deliveryStatus == null)
         && request.resource.data.status == 'paid'
         && request.resource.data.paymentMethod in ['ewallet', 'bankTransfer']
+        && request.resource.data.paymentStatus == 'paid'
         && request.resource.data.paidAt == request.time
-        && changed.hasOnly(['status', 'paymentMethod', 'paidAt'])
-        && changed.hasAll(['status', 'paymentMethod', 'paidAt']);
+        && request.resource.data.codCollectedByUid == null
+        && changed.hasOnly([
+          'status', 'paymentMethod', 'paymentStatus', 'paidAt',
+          'codCollectedByUid'
+        ])
+        && changed.hasAll(['status', 'paymentMethod', 'paymentStatus', 'paidAt']);
     }
 
     function validCourierAssignment() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       let courierUid = request.resource.data.assignedCourierUid;
       return isAdmin()
-        && resource.data.status == 'paid'
+        && isReadyForCourier(resource.data)
         && (!resource.data.keys().hasAny(['deliveryStatus'])
           || resource.data.deliveryStatus == 'assigned')
         && changed.hasOnly([
@@ -286,7 +326,7 @@ service cloud.firestore {
     function validCourierStart() {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       return isAssignedCourier(resource.data)
-        && resource.data.status == 'paid'
+        && isReadyForCourier(resource.data)
         && resource.data.deliveryStatus == 'assigned'
         && changed.hasOnly(['deliveryStatus', 'deliveryStartedAt'])
         && changed.hasAll(['deliveryStatus', 'deliveryStartedAt'])
@@ -308,8 +348,24 @@ service cloud.firestore {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
       return isAssignedCourier(resource.data)
         && resource.data.deliveryStatus == 'inTransit'
-        && changed.hasOnly(['deliveryStatus', 'deliveredAt'])
-        && changed.hasAll(['deliveryStatus', 'deliveredAt'])
+        && (
+          (resource.data.paymentMethod != 'cod'
+            && changed.hasOnly(['deliveryStatus', 'deliveredAt'])
+            && changed.hasAll(['deliveryStatus', 'deliveredAt']))
+          || (resource.data.paymentMethod == 'cod'
+            && changed.hasOnly([
+              'deliveryStatus', 'deliveredAt', 'status', 'paymentStatus',
+              'paidAt', 'codCollectedByUid'
+            ])
+            && changed.hasAll([
+              'deliveryStatus', 'deliveredAt', 'status', 'paymentStatus',
+              'paidAt', 'codCollectedByUid'
+            ])
+            && request.resource.data.status == 'paid'
+            && request.resource.data.paymentStatus == 'paid'
+            && request.resource.data.paidAt == request.time
+            && request.resource.data.codCollectedByUid == request.auth.uid)
+        )
         && request.resource.data.deliveryStatus == 'delivered'
         && request.resource.data.deliveredAt == request.time;
     }
@@ -395,10 +451,11 @@ service cloud.firestore {
     match /orders/{orderId} {
       allow get, list: if canReadOrder(resource.data);
       allow create: if validOrderCreate();
-      allow update: if canConfirmOrder()
-        || canCancelOrder()
-        || canPayOrder()
-        || validCourierAssignment()
+        allow update: if canConfirmOrder()
+          || canCancelOrder()
+          || canChooseCodPayment()
+          || canPayOrder()
+          || validCourierAssignment()
         || validCourierStart()
         || validCourierLocationUpdate()
         || validCourierCompletion();

@@ -3,15 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-// Posisi kurir yang dibagikan realtime dan titik tujuan pemesan.
+import '../services/route_distance_service.dart';
+import '../utils/format_distance.dart';
+
+// Posisi kurir yang dibagikan realtime, titik tujuan, dan rute/ETA opsional.
 class CourierTrackingMap extends StatefulWidget {
   final GeoPoint? courierLocation;
   final GeoPoint? destination;
+  final RouteDistanceService? routeService;
 
   const CourierTrackingMap({
     super.key,
     required this.courierLocation,
     required this.destination,
+    this.routeService,
   });
 
   @override
@@ -21,10 +26,29 @@ class CourierTrackingMap extends StatefulWidget {
 class _CourierTrackingMapState extends State<CourierTrackingMap> {
   final MapController _controller = MapController();
   bool _mapReady = false;
+  RouteInfo? _route;
+  int _routeRequestId = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.routeService?.addListener(_handleRouteServiceChanged);
+    _loadRoute();
+  }
 
   @override
   void didUpdateWidget(covariant CourierTrackingMap oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.routeService != widget.routeService) {
+      oldWidget.routeService?.removeListener(_handleRouteServiceChanged);
+      widget.routeService?.addListener(_handleRouteServiceChanged);
+    }
+    if (oldWidget.courierLocation != widget.courierLocation ||
+        oldWidget.destination != widget.destination ||
+        oldWidget.routeService != widget.routeService) {
+      _loadRoute();
+    }
+
     final location = widget.courierLocation;
     final oldLocation = oldWidget.courierLocation;
     if (location == null ||
@@ -32,19 +56,55 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
             oldLocation?.longitude == location.longitude)) {
       return;
     }
+    final target = widget.destination;
+    final fitPoints = <LatLng>[
+      LatLng(location.latitude, location.longitude),
+      if (target != null) LatLng(target.latitude, target.longitude),
+    ];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_mapReady) return;
-      _controller.move(
-        LatLng(location.latitude, location.longitude),
-        _controller.camera.zoom,
+      _controller.fitCamera(
+        CameraFit.coordinates(
+          coordinates: fitPoints,
+          padding: const EdgeInsets.all(48),
+          maxZoom: 16,
+        ),
       );
     });
   }
 
   @override
   void dispose() {
+    widget.routeService?.removeListener(_handleRouteServiceChanged);
     _controller.dispose();
     super.dispose();
+  }
+
+  void _handleRouteServiceChanged() => _loadRoute();
+
+  Future<void> _loadRoute() async {
+    final requestId = ++_routeRequestId;
+    final service = widget.routeService;
+    final courier = widget.courierLocation;
+    final target = widget.destination;
+    if (service == null ||
+        !service.hasPersonalApiKey ||
+        courier == null ||
+        target == null) {
+      if (mounted) setState(() => _route = null);
+      return;
+    }
+    final info = await service.routeInfo(courier, target);
+    if (!mounted || requestId != _routeRequestId || identical(_route, info)) {
+      return;
+    }
+    setState(() => _route = info);
+  }
+
+  String _formatEta(Duration duration) {
+    final seconds = duration.inSeconds;
+    final minutes = seconds < 60 ? 1 : (seconds / 60).round().clamp(1, 999);
+    return '$minutes mnt';
   }
 
   @override
@@ -61,27 +121,26 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
     final destinationPoint = target == null
         ? null
         : LatLng(target.latitude, target.longitude);
-    final points = [
-      if (courierPoint != null) courierPoint,
-      if (destinationPoint != null) destinationPoint,
-    ];
+    final points = [?courierPoint, ?destinationPoint];
     final pointsDiffer =
         courier != null &&
         target != null &&
         (courier.latitude != target.latitude ||
             courier.longitude != target.longitude);
     final singlePoint = courierPoint ?? destinationPoint!;
-    final initialCenter = pointsDiffer
+    final initialCenter =
+        pointsDiffer && courierPoint != null && destinationPoint != null
         ? LatLng(
-            (courierPoint!.latitude + destinationPoint!.latitude) / 2,
-            (courierPoint!.longitude + destinationPoint!.longitude) / 2,
+            (courierPoint.latitude + destinationPoint.latitude) / 2,
+            (courierPoint.longitude + destinationPoint.longitude) / 2,
           )
         : singlePoint;
+    final route = _route;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: SizedBox(
-        height: 260,
+        height: 290,
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -93,7 +152,7 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
                 initialCameraFit: pointsDiffer
                     ? CameraFit.coordinates(
                         coordinates: points,
-                        padding: const EdgeInsets.all(44),
+                        padding: const EdgeInsets.all(48),
                         maxZoom: 16,
                       )
                     : null,
@@ -106,6 +165,16 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'id.ac.pnl.food_order_app',
                 ),
+                if (route != null && route.polyline.length > 1)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: route.polyline,
+                        color: const Color(0xFF2563EB),
+                        strokeWidth: 4,
+                      ),
+                    ],
+                  ),
                 MarkerLayer(
                   markers: [
                     if (courierPoint case final courierMarkerPoint?)
@@ -115,7 +184,7 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
                         height: 54,
                         child: const _MapPin(
                           icon: Icons.delivery_dining_rounded,
-                          color: Color(0xFF087E75),
+                          color: Color(0xFF059669),
                         ),
                       ),
                     if (destinationPoint case final destinationMarkerPoint?)
@@ -125,7 +194,7 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
                         height: 50,
                         child: const _MapPin(
                           icon: Icons.location_on_rounded,
-                          color: Color(0xFFC2413B),
+                          color: Color(0xFFE11D48),
                         ),
                       ),
                   ],
@@ -136,39 +205,80 @@ class _CourierTrackingMapState extends State<CourierTrackingMap> {
               ],
             ),
             Positioned(
-              top: 10,
-              left: 10,
+              top: 12,
+              left: 12,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.94),
-                  borderRadius: BorderRadius.circular(14),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color(0x22000000),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
+                      color: Color(0x1F000000),
+                      blurRadius: 10,
+                      offset: Offset(0, 3),
                     ),
                   ],
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
+                    horizontal: 12,
                     vertical: 8,
                   ),
-                  child: Row(
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (courierPoint != null) ...[
-                        const _LegendDot(color: Color(0xFF087E75)),
-                        const SizedBox(width: 5),
-                        const Text('Kurir'),
-                      ],
-                      if (courierPoint != null && destinationPoint != null)
-                        const SizedBox(width: 12),
-                      if (destinationPoint != null) ...[
-                        const _LegendDot(color: Color(0xFFC2413B)),
-                        const SizedBox(width: 5),
-                        const Text('Tujuan'),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (courierPoint != null) ...[
+                            const _LegendDot(color: Color(0xFF059669)),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Kurir',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF17211D),
+                              ),
+                            ),
+                          ],
+                          if (courierPoint != null && destinationPoint != null)
+                            const SizedBox(width: 12),
+                          if (destinationPoint != null) ...[
+                            const _LegendDot(color: Color(0xFFE11D48)),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Tujuan',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF17211D),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      if (route != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '${formatDistance(route.distanceMeters)} · ETA '
+                          '${_formatEta(route.duration)}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2563EB),
+                          ),
+                        ),
+                      ] else if (widget.routeService != null) ...[
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Rute/ETA: masukkan API key ORS',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
                       ],
                     ],
                   ),

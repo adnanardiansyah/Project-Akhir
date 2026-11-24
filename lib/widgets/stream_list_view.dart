@@ -15,6 +15,8 @@ class StreamListView<T> extends StatefulWidget {
   final Widget? header;
   // Ruang kosong di bawah daftar, misalnya agar tidak tertutup bar keranjang
   final double bottomPadding;
+  // Berubah saat pengguna menarik daftar untuk meminta aliran baru
+  final Object? refreshToken;
 
   const StreamListView({
     super.key,
@@ -25,6 +27,7 @@ class StreamListView<T> extends StatefulWidget {
     required this.errorMessage,
     this.header,
     this.bottomPadding = 32,
+    this.refreshToken,
   });
 
   @override
@@ -33,7 +36,15 @@ class StreamListView<T> extends StatefulWidget {
 
 // Menyimpan aliran agar tidak dibuat ulang tiap build
 class _StreamListViewState<T> extends State<StreamListView<T>> {
-  late final Stream<List<T>> _stream = widget.streamFactory();
+  late Stream<List<T>> _stream = widget.streamFactory();
+
+  @override
+  void didUpdateWidget(covariant StreamListView<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshToken != widget.refreshToken) {
+      _stream = widget.streamFactory();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +86,7 @@ class _StreamListViewState<T> extends State<StreamListView<T>> {
     final offset = header == null ? 0 : 1;
     return ListView.separated(
       key: const ValueKey('list'),
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(20, 8, 20, widget.bottomPadding),
       itemCount: items.length + offset,
       separatorBuilder: (_, _) => const SizedBox(height: 12),

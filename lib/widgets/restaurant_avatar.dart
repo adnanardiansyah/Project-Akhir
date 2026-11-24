@@ -10,12 +10,12 @@ const List<IconData> _foodIcons = [
   Icons.bakery_dining_rounded,
 ];
 
-// Pasangan warna gradasi hangat untuk latar avatar
+// Pasangan warna gradasi Emerald Premium untuk latar avatar
 const List<List<Color>> _gradients = [
-  [Color(0xFF0F766E), Color(0xFF115E59)],
-  [Color(0xFF15803D), Color(0xFF166534)],
-  [Color(0xFF0E7490), Color(0xFF155E75)],
-  [Color(0xFF4D7C0F), Color(0xFF3F6212)],
+  [Color(0xFF10B981), Color(0xFF047857)], // Emerald Primary
+  [Color(0xFF0D9488), Color(0xFF115E59)], // Emerald Teal
+  [Color(0xFF16A34A), Color(0xFF14532D)], // Fresh Green
+  [Color(0xFF059669), Color(0xFF064E3B)], // Deep Emerald
 ];
 
 // Avatar resto bergradasi dengan ikon; Hero membuatnya berpindah mulus antar layar

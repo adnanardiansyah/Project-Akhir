@@ -25,8 +25,14 @@ void main() {
       expect(user.restaurantId, 'resto1');
     });
 
+    test('membaca peran admin', () {
+      final user = AppUser.fromMap('a1', {'role': 'admin'});
+      expect(user!.role, UserRole.admin);
+      expect(user.displayName, '');
+    });
+
     test('peran tidak dikenal atau kosong menghasilkan null', () {
-      expect(AppUser.fromMap('x', {'role': 'admin'}), isNull);
+      expect(AppUser.fromMap('x', {'role': 'superadmin'}), isNull);
       expect(AppUser.fromMap('x', {}), isNull);
     });
 

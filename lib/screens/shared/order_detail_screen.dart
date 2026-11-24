@@ -217,7 +217,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ),
         if (_isCustomer && order.deliveryStatus != null) ...[
           const SizedBox(height: 16),
-          FadeSlideIn(index: 2, child: _CourierTrackingPanel(order: order)),
+          FadeSlideIn(
+            index: 2,
+            child: _CourierTrackingPanel(
+              order: order,
+              services: widget.services,
+            ),
+          ),
         ],
         const SizedBox(height: 16),
         FadeSlideIn(index: 3, child: _OrderItemsCard(order: order)),
@@ -225,7 +231,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         FadeSlideIn(
           index: 4,
           child: _OrderActions(
-            status: order.status,
+            order: order,
             isCustomer: _isCustomer,
             updatingTo: _updatingTo,
             onChange: (next) => _changeStatus(order, next),
@@ -249,13 +255,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
 class _CourierTrackingPanel extends StatelessWidget {
   final FoodOrder order;
+  final AppServices services;
 
-  const _CourierTrackingPanel({required this.order});
+  const _CourierTrackingPanel({required this.order, required this.services});
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
     final deliveryStatus = order.deliveryStatus!;
     final isMoving = deliveryStatus == DeliveryStatus.inTransit;
     final hasMap =
@@ -263,59 +268,182 @@ class _CourierTrackingPanel extends StatelessWidget {
         order.courierLocation != null &&
         order.deliveryLocation != null;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.delivery_dining_rounded, color: scheme.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(deliveryStatus.label, style: text.titleMedium),
-                ),
-              ],
-            ),
-            if (order.assignedCourierName case final courierName?) ...[
-              const SizedBox(height: 4),
-              Text('Kurir: $courierName', style: text.bodyMedium),
-            ],
-            const SizedBox(height: 10),
-            if (hasMap) ...[
-              CourierTrackingMap(
-                courierLocation: order.courierLocation,
-                destination: order.deliveryLocation,
+    final (badgeColor, statusTitle, statusDesc) = switch (deliveryStatus) {
+      DeliveryStatus.assigned => (
+        EmeraldColors.warning,
+        'Kurir Ditugaskan',
+        'Kurir sedang menuju restoran untuk mengambil pesanan Anda.',
+      ),
+      DeliveryStatus.inTransit => (
+        EmeraldColors.primary,
+        'Pesanan Sedang Diantar',
+        'Kurir sedang dalam perjalanan ke alamat tujuan Anda.',
+      ),
+      DeliveryStatus.delivered => (
+        EmeraldColors.success,
+        'Pesanan Telah Tiba',
+        'Pengantaran telah diselesaikan oleh kurir.',
+      ),
+    };
+
+    return Container(
+      decoration: BoxDecoration(
+        color: EmeraldColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: EmeraldColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header strip
+          Container(
+            height: 5,
+            decoration: BoxDecoration(
+              color: badgeColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(22),
               ),
-              if (order.courierLocationUpdatedAt case final updatedAt?)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    'Posisi terakhir diperbarui ${formatDateTime(updatedAt)}',
-                    style: text.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: badgeColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        Icons.delivery_dining_rounded,
+                        color: badgeColor,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            statusTitle,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: EmeraldColors.textPrimary,
+                            ),
+                          ),
+                          if (order.assignedCourierName
+                              case final courierName?) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'Kurir: $courierName',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: EmeraldColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: badgeColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        deliveryStatus.label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: badgeColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (hasMap) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: CourierTrackingMap(
+                      courierLocation: order.courierLocation,
+                      destination: order.deliveryLocation,
+                      routeService: services.routeDistance,
                     ),
                   ),
-                ),
-            ] else if (deliveryStatus == DeliveryStatus.assigned) ...[
-              Text(
-                'Kurir sudah ditugaskan. Peta akan menampilkan posisi saat kurir memulai pengantaran.',
-                style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ] else if (deliveryStatus == DeliveryStatus.inTransit) ...[
-              Text(
-                'Menunggu lokasi GPS kurir. Peta akan diperbarui saat posisi diterima.',
-                style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ] else ...[
-              Text(
-                'Kurir telah menandai pengantaran selesai.',
-                style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ],
-          ],
-        ),
+                  if (order.courierLocationUpdatedAt case final updatedAt?)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.access_time_rounded,
+                            size: 14,
+                            color: EmeraldColors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Posisi diperbarui ${formatDateTime(updatedAt)}',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: EmeraldColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: EmeraldColors.softGreenLight,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: EmeraldColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          color: badgeColor,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            statusDesc,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: EmeraldColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -436,7 +564,11 @@ class _OrderItemsCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      paidAt == null
+                      paymentMethod == PaymentMethod.cod
+                          ? paidAt == null
+                                ? 'COD — bayar tunai saat pesanan tiba'
+                                : 'COD diterima kurir · ${formatDateTime(paidAt)}'
+                          : paidAt == null
                           ? 'Dibayar lewat ${paymentMethod.label}'
                           : 'Dibayar lewat ${paymentMethod.label} · '
                                 '${formatDateTime(paidAt)}',
@@ -457,14 +589,14 @@ class _OrderItemsCard extends StatelessWidget {
 
 // Tombol aksi sesuai peran dan status: resto konfirmasi/batal, pemesan bayar/batal sebelum dibayar
 class _OrderActions extends StatelessWidget {
-  final OrderStatus status;
+  final FoodOrder order;
   final bool isCustomer;
   final OrderStatus? updatingTo;
   final ValueChanged<OrderStatus> onChange;
   final VoidCallback onPay;
 
   const _OrderActions({
-    required this.status,
+    required this.order,
     required this.isCustomer,
     required this.updatingTo,
     required this.onChange,
@@ -474,10 +606,15 @@ class _OrderActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final status = order.status;
+    final codChosen = order.isCodPayment && !order.isPaid;
     final canConfirm =
         !isCustomer && status.canTransitionTo(OrderStatus.confirmed);
-    final canPay = isCustomer && status.canTransitionTo(OrderStatus.paid);
-    final canCancel = status.canTransitionTo(OrderStatus.cancelled);
+    final canPay =
+        isCustomer && status.canTransitionTo(OrderStatus.paid) && !codChosen;
+    final canCancel =
+        status.canTransitionTo(OrderStatus.cancelled) &&
+        order.deliveryStatus == null;
     final busy = updatingTo != null;
     return AnimatedSize(
       duration: motionMedium,
@@ -485,6 +622,31 @@ class _OrderActions extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (codChosen && isCustomer) ...[
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.money_rounded, size: 20, color: scheme.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'COD dipilih. Bayar ${formatRupiah(order.total)} tunai saat kurir tiba.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           if (canPay) ...[
             FilledButton.icon(
               onPressed: busy ? null : onPay,

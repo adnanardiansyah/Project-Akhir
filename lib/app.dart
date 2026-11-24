@@ -208,7 +208,7 @@ class _ProfileGateState extends State<_ProfileGate> {
   }
 }
 
-class _CustomerHomeGate extends StatelessWidget {
+class _CustomerHomeGate extends StatefulWidget {
   final AppUser user;
   final AppServices services;
   final CartController cart;
@@ -221,23 +221,36 @@ class _CustomerHomeGate extends StatelessWidget {
   });
 
   @override
+  State<_CustomerHomeGate> createState() => _CustomerHomeGateState();
+}
+
+class _CustomerHomeGateState extends State<_CustomerHomeGate> {
+  late final Stream<PartnerApplication?> _applicationStream =
+      widget.services.partnerApplications.watchApplication(widget.user.uid);
+
+  @override
   Widget build(BuildContext context) {
     return StreamBuilder<PartnerApplication?>(
-      stream: services.partnerApplications.watchApplication(user.uid),
+      stream: _applicationStream,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          // Menghindari flickering saat inisialisasi stream
+          return const _LoadingScreen();
+        }
         final application = snapshot.data;
         if (application != null) {
           return PartnerApplicationStatusScreen(
             key: const ValueKey('partner-application-status'),
-            user: user,
+            user: widget.user,
             application: application,
-            services: services,
+            services: widget.services,
           );
         }
         return RestaurantListScreen(
-          user: user,
-          services: services,
-          cart: cart,
+          key: const ValueKey('restaurant-list-screen'),
+          user: widget.user,
+          services: widget.services,
+          cart: widget.cart,
         );
       },
     );

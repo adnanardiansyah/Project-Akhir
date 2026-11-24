@@ -20,6 +20,19 @@ class LocationResult {
   const LocationResult.failure(this.issue) : location = null;
 }
 
+// Satu titik GPS kurir yang ikut dibagikan ke Firestore.
+class CourierPosition {
+  final GeoPoint location;
+  final double? speedMetersPerSecond;
+  final DateTime timestamp;
+
+  const CourierPosition({
+    required this.location,
+    required this.speedMetersPerSecond,
+    required this.timestamp,
+  });
+}
+
 // Lokasi perangkat pemesan, dibagikan ke semua label jarak pada sesi akun.
 class LocationService extends ChangeNotifier {
   // Satu permintaan lokasi dipakai bersama oleh semua label jarak.
@@ -28,8 +41,8 @@ class LocationService extends ChangeNotifier {
 
   Future<LocationResult> currentLocation() => _current ??= _fetch();
 
-  // Streaming GPS untuk layar kurir saat aplikasi terbuka.
-  Future<Stream<GeoPoint>> watchPositionStream() async {
+  // Streaming GPS kurir, tetap jalan lewat foreground service saat app ditutup.
+  Future<Stream<CourierPosition>> watchPositionStream() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
       throw StateError('Aktifkan GPS perangkat kurir.');
     }
@@ -43,12 +56,64 @@ class LocationService extends ChangeNotifier {
     if (permission == LocationPermission.denied) {
       throw StateError('Izinkan akses lokasi untuk mulai mengantar.');
     }
+    if (defaultTargetPlatform == TargetPlatform.android &&
+        permission == LocationPermission.whileInUse) {
+      throw StateError(
+        'Pilih "Izinkan sepanjang waktu" lewat tombol pengaturan lokasi.',
+      );
+    }
     return Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 10,
+      locationSettings: _courierSettings(),
+    ).map(
+      (position) => CourierPosition(
+        location: GeoPoint(position.latitude, position.longitude),
+        speedMetersPerSecond: position.speed.isFinite && position.speed >= 0
+            ? position.speed
+            : null,
+        timestamp: position.timestamp,
       ),
-    ).map((position) => GeoPoint(position.latitude, position.longitude));
+    );
+  }
+
+  LocationSettings _courierSettings() => switch (defaultTargetPlatform) {
+    TargetPlatform.android => AndroidSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 10,
+      intervalDuration: const Duration(seconds: 10),
+      foregroundNotificationConfig: const ForegroundNotificationConfig(
+        notificationTitle: 'Pelacakan pengantaran aktif',
+        notificationText: 'Lokasi kurir dibagikan ke pemesan.',
+        notificationChannelName: 'Pelacakan Kurir',
+        notificationIcon: AndroidResource(
+          name: 'ic_launcher',
+          defType: 'mipmap',
+        ),
+        enableWakeLock: true,
+        enableWifiLock: true,
+        setOngoing: true,
+      ),
+    ),
+    TargetPlatform.iOS => AppleSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 10,
+      activityType: ActivityType.other,
+      allowBackgroundLocationUpdates: true,
+      showBackgroundLocationIndicator: true,
+      pauseLocationUpdatesAutomatically: false,
+    ),
+    _ => const LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 10,
+    ),
+  };
+
+  // Android 11+ mengharuskan "Allow all the time" lewat Pengaturan.
+  Future<void> openBackgroundLocationSettings() async {
+    try {
+      await Geolocator.openLocationSettings();
+    } catch (_) {
+      // Platform tanpa halaman pengaturan lokasi cukup diabaikan.
+    }
   }
 
   // Ambil GPS terbaru; semua label jarak menghitung ulang setelah hasil tersedia.

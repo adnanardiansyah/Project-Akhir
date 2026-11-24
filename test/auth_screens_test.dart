@@ -24,7 +24,7 @@ void main() {
     testWidgets('form kosong menampilkan pesan wajib diisi', (tester) async {
       await _pumpScreen(tester, LoginScreen(authService: AuthService()));
 
-      await _tapButton(tester, 'Masuk');
+      await _tapButton(tester, 'Masuk Sekarang');
 
       expect(find.text('Email wajib diisi'), findsOneWidget);
       expect(find.text('Kata sandi wajib diisi'), findsOneWidget);
@@ -35,7 +35,7 @@ void main() {
 
       await tester.enterText(find.byType(TextFormField).at(0), 'budi');
       await tester.enterText(find.byType(TextFormField).at(1), '123');
-      await _tapButton(tester, 'Masuk');
+      await _tapButton(tester, 'Masuk Sekarang');
 
       expect(find.text('Format email tidak valid'), findsOneWidget);
       expect(find.text('Kata sandi minimal 6 karakter'), findsOneWidget);
@@ -44,7 +44,10 @@ void main() {
     testWidgets('tautan daftar membuka layar pendaftaran', (tester) async {
       await _pumpScreen(tester, LoginScreen(authService: AuthService()));
 
-      await tester.tap(find.text('Belum punya akun? Daftar sebagai pemesan'));
+      final link = find.byType(TextButton);
+      await tester.ensureVisible(link);
+      await tester.pumpAndSettle();
+      await tester.tap(link);
       await tester.pumpAndSettle();
 
       expect(find.byType(RegisterScreen), findsOneWidget);
@@ -55,12 +58,12 @@ void main() {
     testWidgets('form kosong menampilkan semua pesan wajib', (tester) async {
       await _pumpScreen(tester, RegisterScreen(authService: AuthService()));
 
-      await _tapButton(tester, 'Daftar');
+      await _tapButton(tester, 'Daftar Sekarang');
 
       expect(find.text('Nama wajib diisi'), findsOneWidget);
       expect(find.text('Email wajib diisi'), findsOneWidget);
-      expect(find.text('Kata sandi wajib diisi'), findsOneWidget);
-      expect(find.text('Ulangi kata sandi'), findsNWidgets(2));
+      expect(find.text('Kata sandi wajib diisi'), findsNWidgets(2));
+      expect(find.text('Konfirmasi Kata Sandi'), findsOneWidget);
     });
 
     testWidgets('konfirmasi sandi berbeda ditolak', (tester) async {
@@ -71,9 +74,9 @@ void main() {
       await tester.enterText(fields.at(1), 'budi@example.com');
       await tester.enterText(fields.at(2), 'rahasia1');
       await tester.enterText(fields.at(3), 'rahasia2');
-      await _tapButton(tester, 'Daftar');
+      await _tapButton(tester, 'Daftar Sekarang');
 
-      expect(find.text('Kata sandi tidak sama'), findsOneWidget);
+      expect(find.text('Kata sandi konfirmasi tidak cocok'), findsOneWidget);
       expect(find.text('Nama wajib diisi'), findsNothing);
     });
   });

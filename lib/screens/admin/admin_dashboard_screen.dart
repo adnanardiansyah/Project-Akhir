@@ -14,11 +14,12 @@ import '../../widgets/courier_tracking_map.dart';
 import '../../widgets/order_filter_bar.dart';
 import '../../widgets/order_status_chip.dart';
 import '../../widgets/restaurant_avatar.dart';
+import '../../widgets/route_api_key_button.dart';
 import '../../widgets/state_message.dart';
 import '../../widgets/welcome_banner.dart';
 
-// Dashboard admin untuk ringkasan, tinjauan resto, dan pemantauan pesanan.
-class AdminDashboardScreen extends StatelessWidget {
+// Dashboard admin modern dengan arsitektur SaaS responsif (Sidebar di Desktop/Tablet, TabBar di Mobile).
+class AdminDashboardScreen extends StatefulWidget {
   final AppUser user;
   final AppServices services;
 
@@ -29,39 +30,426 @@ class AdminDashboardScreen extends StatelessWidget {
   });
 
   @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  int _activeNavIndex = 0;
+
+  static const List<_AdminNavItem> _navItems = [
+    _AdminNavItem(icon: Icons.dashboard_rounded, label: 'Overview Ringkasan'),
+    _AdminNavItem(icon: Icons.storefront_rounded, label: 'Katalog Resto'),
+    _AdminNavItem(
+      icon: Icons.receipt_long_rounded,
+      label: 'Monitoring Pesanan',
+    ),
+    _AdminNavItem(icon: Icons.group_add_rounded, label: 'Pengajuan Mitra'),
+  ];
+
+  @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Panel Admin'),
-          actions: [LogoutButton(authService: services.auth)],
-          bottom: const TabBar(
-            isScrollable: true,
-            tabs: [
-              Tab(icon: Icon(Icons.dashboard_outlined), text: 'Ringkasan'),
-              Tab(icon: Icon(Icons.storefront_outlined), text: 'Resto'),
-              Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Pesanan'),
-              Tab(icon: Icon(Icons.group_add_outlined), text: 'Pengajuan'),
-            ],
-          ),
-        ),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1280),
-            child: TabBarView(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isDesktopOrTablet = constraints.maxWidth >= 840;
+
+        if (isDesktopOrTablet) {
+          return Scaffold(
+            backgroundColor: EmeraldColors.background,
+            body: Row(
               children: [
-                _AdminOverviewTab(user: user, services: services),
-                _RestaurantReviewTab(user: user, services: services),
-                _OrderMonitoringTab(services: services),
-                PartnerApplicationsTab(user: user, services: services),
+                // Modern SaaS Sidebar Navigation
+                _buildSaaSSidebar(),
+
+                // Right Content Canvas
+                Expanded(
+                  child: Column(
+                    children: [
+                      // SaaS Header Bar
+                      _buildSaaSHeader(),
+
+                      // Tab Content
+                      Expanded(
+                        child: IndexedStack(
+                          index: _activeNavIndex,
+                          children: [
+                            _AdminOverviewTab(
+                              user: widget.user,
+                              services: widget.services,
+                            ),
+                            _RestaurantReviewTab(
+                              user: widget.user,
+                              services: widget.services,
+                            ),
+                            _OrderMonitoringTab(services: widget.services),
+                            PartnerApplicationsTab(
+                              user: widget.user,
+                              services: widget.services,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Mobile Layout dengan DefaultTabController & TabBar
+        return DefaultTabController(
+          length: 4,
+          child: Scaffold(
+            backgroundColor: EmeraldColors.background,
+            appBar: AppBar(
+              title: const Text('Panel Admin'),
+              actions: [LogoutButton(authService: widget.services.auth)],
+              bottom: const TabBar(
+                isScrollable: true,
+                tabs: [
+                  Tab(icon: Icon(Icons.dashboard_outlined), text: 'Ringkasan'),
+                  Tab(icon: Icon(Icons.storefront_outlined), text: 'Resto'),
+                  Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Pesanan'),
+                  Tab(icon: Icon(Icons.group_add_outlined), text: 'Pengajuan'),
+                ],
+              ),
+            ),
+            body: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1280),
+                child: TabBarView(
+                  children: [
+                    _AdminOverviewTab(
+                      user: widget.user,
+                      services: widget.services,
+                    ),
+                    _RestaurantReviewTab(
+                      user: widget.user,
+                      services: widget.services,
+                    ),
+                    _OrderMonitoringTab(services: widget.services),
+                    PartnerApplicationsTab(
+                      user: widget.user,
+                      services: widget.services,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSaaSSidebar() {
+    return Container(
+      width: 260,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          right: BorderSide(color: EmeraldColors.border, width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+            blurRadius: 16,
+            offset: const Offset(4, 0),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Sidebar Brand Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        EmeraldColors.secondary,
+                        EmeraldColors.primaryDark,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.admin_panel_settings_rounded,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Food Order',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: EmeraldColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Admin SaaS Portal',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: EmeraldColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-        ),
+
+          const Divider(height: 1),
+
+          // Admin Profile Capsule
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: EmeraldColors.softGreenLight,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: EmeraldColors.accent.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: EmeraldColors.primary,
+                    child: Text(
+                      widget.user.displayName.isNotEmpty
+                          ? widget.user.displayName[0].toUpperCase()
+                          : 'A',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.user.displayName.isNotEmpty
+                              ? widget.user.displayName
+                              : 'Administrator',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: EmeraldColors.textPrimary,
+                          ),
+                        ),
+                        const Text(
+                          'Super Admin',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: EmeraldColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 8, 20, 8),
+            child: Text(
+              'MENU UTAMA',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: EmeraldColors.textSecondary,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ),
+
+          // Navigation Links
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              itemCount: _navItems.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 4),
+              itemBuilder: (context, index) {
+                final item = _navItems[index];
+                final isActive = _activeNavIndex == index;
+
+                return InkWell(
+                  onTap: () => setState(() => _activeNavIndex = index),
+                  borderRadius: BorderRadius.circular(14),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? EmeraldColors.softGreen
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          item.icon,
+                          size: 20,
+                          color: isActive
+                              ? EmeraldColors.primary
+                              : EmeraldColors.textSecondary,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            item.label,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isActive
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                              color: isActive
+                                  ? EmeraldColors.primaryDark
+                                  : EmeraldColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        if (isActive)
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: EmeraldColors.primary,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Bottom Logout Area
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: EmeraldColors.surfaceMuted,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: EmeraldColors.border),
+              ),
+              child: LogoutButton(authService: widget.services.auth),
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  Widget _buildSaaSHeader() {
+    final title = _navItems[_activeNavIndex].label;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: EmeraldColors.border, width: 1),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: EmeraldColors.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: EmeraldColors.softGreen,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Live Firestore Sync',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: EmeraldColors.primaryDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              RouteApiKeyButton(service: widget.services.routeDistance),
+              const SizedBox(width: 8),
+              Text(
+                'Lhokseumawe, ID',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: EmeraldColors.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const CircleAvatar(
+                radius: 4,
+                backgroundColor: EmeraldColors.success,
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'Sistem Online',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: EmeraldColors.success,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminNavItem {
+  final IconData icon;
+  final String label;
+  const _AdminNavItem({required this.icon, required this.label});
 }
 
 class _AdminOverviewTab extends StatefulWidget {
@@ -142,7 +530,7 @@ class _AdminOverviewTabState extends State<_AdminOverviewTab> {
                     final ordersNeedingCourier = orders
                         .where(
                           (order) =>
-                              order.status == OrderStatus.paid &&
+                              order.isReadyForCourier &&
                               order.assignedCourierUid == null,
                         )
                         .length;
@@ -179,10 +567,10 @@ class _AdminOverviewTabState extends State<_AdminOverviewTab> {
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                             childAspectRatio: constraints.maxWidth >= 1000
-                                ? 3.0
+                                ? 2.5
                                 : constraints.maxWidth >= 620
-                                ? 1.7
-                                : 1.35,
+                                ? 1.45
+                                : 1.12,
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             children: [
@@ -279,11 +667,21 @@ class _DashboardMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: EmeraldColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: EmeraldColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -293,35 +691,41 @@ class _DashboardMetric extends StatelessWidget {
               height: 38,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(13),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: color, size: 21),
+              child: Icon(icon, color: color, size: 20),
             ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  '$value',
-                  style: text.headlineSmall?.copyWith(
-                    color: scheme.onSurface,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 3),
+            const SizedBox(height: 6),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
                     child: Text(
-                      label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.labelSmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
+                      '$value',
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: EmeraldColors.textPrimary,
+                        height: 1,
                       ),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 3),
+                  Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: EmeraldColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -850,7 +1254,7 @@ class _OrderMonitoringTabState extends State<_OrderMonitoringTab> {
             final waitingForCourier = orders
                 .where(
                   (order) =>
-                      order.status == OrderStatus.paid &&
+                      order.isReadyForCourier &&
                       order.assignedCourierUid == null,
                 )
                 .length;
@@ -920,7 +1324,7 @@ class _OrderMonitoringTabState extends State<_OrderMonitoringTab> {
                         ConnectionState.waiting &&
                     visibleOrders.any(
                       (order) =>
-                          order.status == OrderStatus.paid &&
+                          order.isReadyForCourier &&
                           order.deliveryStatus == null,
                     ))
                   const LinearProgressIndicator(),
@@ -1095,6 +1499,14 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                         runSpacing: 6,
                         children: [
                           OrderStatusChip(status: order.status),
+                          if (order.isCodPayment && !order.isPaid)
+                            Text(
+                              'COD — bayar di tujuan',
+                              style: text.labelSmall?.copyWith(
+                                color: scheme.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           Text(
                             formatRupiah(order.total),
                             style: text.titleSmall?.copyWith(
@@ -1138,6 +1550,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
                       child: CourierTrackingMap(
                         courierLocation: order.courierLocation,
                         destination: order.deliveryLocation,
+                        routeService: widget.services.routeDistance,
                       ),
                     )
                   else
@@ -1151,7 +1564,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
               ),
             ],
             if (widget.allowCourierAssignment &&
-                order.status == OrderStatus.paid &&
+                order.isReadyForCourier &&
                 order.deliveryStatus != DeliveryStatus.inTransit &&
                 order.deliveryStatus != DeliveryStatus.delivered) ...[
               const SizedBox(height: 10),

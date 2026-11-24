@@ -19,8 +19,10 @@ Map<String, dynamic> _validOrderData() => {
   'total': 38000,
   'status': 'pending',
   'paymentMethod': null,
+  'paymentStatus': 'unpaid',
   'createdAt': Timestamp.fromDate(DateTime.utc(2026, 11, 17, 7, 5)),
   'paidAt': null,
+  'codCollectedByUid': null,
 };
 
 // Pesanan minimal dengan waktu buat tertentu, untuk tes urutan
@@ -86,6 +88,8 @@ void main() {
       expect(order.items, hasLength(2));
       expect(order.total, 38000);
       expect(order.status, OrderStatus.pending);
+      expect(order.paymentStatus, PaymentStatus.unpaid);
+      expect(order.isPaid, isFalse);
       // Timestamp dibaca sebagai waktu lokal; yang dibandingkan momennya
       expect(
         order.createdAt!.isAtSameMomentAs(DateTime.utc(2026, 11, 17, 7, 5)),
@@ -120,6 +124,56 @@ void main() {
     test('label status dalam bahasa Indonesia', () {
       expect(OrderStatus.pending.label, 'Menunggu konfirmasi');
       expect(OrderStatus.paid.label, 'Sudah dibayar');
+      expect(PaymentStatus.unpaid.label, 'Belum dibayar');
+      expect(PaymentStatus.paid.label, 'Sudah dibayar');
+    });
+
+    test('dokumen lama tanpa paymentStatus ikut status', () {
+      final data = _validOrderData()..remove('paymentStatus');
+      expect(
+        FoodOrder.fromMap('o1', data)!.paymentStatus,
+        PaymentStatus.unpaid,
+      );
+      final paid = _validOrderData()
+        ..['status'] = 'paid'
+        ..remove('paymentStatus');
+      expect(FoodOrder.fromMap('o1', paid)!.paymentStatus, PaymentStatus.paid);
+    });
+  });
+
+  group('COD', () {
+    FoodOrder codOrder({DeliveryStatus? deliveryStatus}) => FoodOrder(
+      id: 'cod1',
+      customerUid: 'c1',
+      customerName: 'Rian',
+      restaurantId: 'resto1',
+      restaurantName: 'Mie Aceh Contoh',
+      items: const [
+        OrderItem(menuItemId: 'mie', name: 'Mie Aceh', price: 15000, qty: 1),
+      ],
+      total: 15000,
+      status: OrderStatus.confirmed,
+      paymentMethod: 'cod',
+      paymentStatus: PaymentStatus.unpaid,
+      deliveryStatus: deliveryStatus,
+    );
+
+    test('COD dikonfirmasi siap ditugaskan meski belum lunas', () {
+      final order = codOrder();
+      expect(order.isCodPayment, isTrue);
+      expect(order.isPaid, isFalse);
+      expect(order.isReadyForCourier, isTrue);
+    });
+
+    test('COD sedang diantar tidak bisa ditugaskan ulang', () {
+      expect(
+        codOrder(deliveryStatus: DeliveryStatus.inTransit).isReadyForCourier,
+        isFalse,
+      );
+      expect(
+        codOrder(deliveryStatus: DeliveryStatus.delivered).isReadyForCourier,
+        isFalse,
+      );
     });
   });
 

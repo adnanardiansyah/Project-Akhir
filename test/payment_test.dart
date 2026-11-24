@@ -49,6 +49,7 @@ void main() {
     test('setiap metode punya label bahasa Indonesia', () {
       expect(PaymentMethod.ewallet.label, 'E-Wallet');
       expect(PaymentMethod.bankTransfer.label, 'Transfer Bank');
+      expect(PaymentMethod.cod.label, 'COD (Bayar di Tempat)');
     });
   });
 
@@ -61,7 +62,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final payButton = find.widgetWithText(FilledButton, 'Bayar Rp 30.000');
+      final payButton = find.widgetWithText(
+        FilledButton,
+        'Konfirmasi Bayar Rp 30.000',
+      );
       expect(tester.widget<FilledButton>(payButton).onPressed, isNull);
 
       await tester.tap(find.text('E-Wallet'));
@@ -78,8 +82,20 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Pembayaran simulasi'), findsOneWidget);
+      expect(find.textContaining('Mode Simulasi Aman'), findsOneWidget);
       expect(find.text('Rp 30.000'), findsOneWidget);
+    });
+
+    testWidgets('menampilkan opsi COD', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PaymentScreen(order: _confirmedOrder, services: _services()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('COD (Bayar di Tempat)'), findsOneWidget);
+      expect(find.text('Bayar tunai saat kurir tiba'), findsOneWidget);
     });
   });
 }

@@ -6,11 +6,14 @@ import 'package:food_order_app/services/route_distance_service.dart';
 import 'package:food_order_app/utils/format_distance.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:latlong2/latlong.dart';
 
 // Potongan respons asli ORS (docs/bukti/l7_ors_contoh_respons.json) untuk resto1 ke resto2
 const _orsSample =
     '{"type": "FeatureCollection", "features": [{"type": "Feature", '
-    '"properties": {"summary": {"distance": 2280.7, "duration": 292.1}}}]}';
+    '"properties": {"summary": {"distance": 2280.7, "duration": 292.1}}, '
+    '"geometry": {"type": "LineString", "coordinates": '
+    '[[97.1507, 5.1801], [97.1460, 5.1789], [97.1390, 5.1790]]}}]}';
 
 const _resto1 = GeoPoint(5.1801, 97.1507);
 const _resto2 = GeoPoint(5.179, 97.139);
@@ -54,6 +57,50 @@ void main() {
     });
   });
 
+  group('parseRouteInfo', () {
+    test('membaca durasi dan polyline dari geometry ORS', () {
+      final info = parseRouteInfo(jsonDecode(_orsSample));
+      expect(info, isNotNull);
+      expect(info!.distanceMeters, 2280.7);
+      expect(info.duration, const Duration(seconds: 292));
+      expect(info.polyline, [
+        const LatLng(5.1801, 97.1507),
+        const LatLng(5.1789, 97.1460),
+        const LatLng(5.1790, 97.1390),
+      ]);
+    });
+
+    test('tanpa geometry tetap menghasilkan rute dengan polyline kosong', () {
+      final info = parseRouteInfo({
+        'features': [
+          {
+            'properties': {
+              'summary': {'distance': 100, 'duration': 60},
+            },
+          },
+        ],
+      });
+      expect(info?.distanceMeters, 100);
+      expect(info?.duration, const Duration(seconds: 60));
+      expect(info?.polyline, isEmpty);
+    });
+
+    test('durasi tidak valid menghasilkan null', () {
+      expect(
+        parseRouteInfo({
+          'features': [
+            {
+              'properties': {
+                'summary': {'distance': 100, 'duration': 'lama'},
+              },
+            },
+          ],
+        }),
+        isNull,
+      );
+    });
+  });
+
   group('RouteDistanceService', () {
     test('mengirim key lewat header dan koordinat lon,lat', () async {
       late http.Request captured;
@@ -73,6 +120,8 @@ void main() {
       expect(captured.url.path, '/openrouteservice/v2/directions/driving-car');
       expect(captured.url.queryParameters['start'], '97.1507,5.1801');
       expect(captured.url.queryParameters['end'], '97.139,5.179');
+      expect(captured.url.queryParameters['geometries'], 'geojson');
+      expect(captured.url.queryParameters['overview'], 'full');
       expect(captured.url.queryParameters.containsKey('api_key'), isFalse);
     });
 
@@ -146,6 +195,26 @@ void main() {
       service.setPersonalApiKey('kunci-uji');
       expect(await service.distanceMeters(_resto1, _resto2), isNull);
     });
+
+    test(
+      'key dihapus setelah sesi berakhir dan harus dimasukkan lagi',
+      () async {
+        var calls = 0;
+        final service = RouteDistanceService(
+          client: MockClient((_) async {
+            calls++;
+            return http.Response(_orsSample, 200);
+          }),
+        );
+        service.setPersonalApiKey('kunci-sesi');
+        expect(await service.distanceMeters(_resto1, _resto2), 2280.7);
+
+        service.clearPersonalApiKey();
+        expect(service.hasPersonalApiKey, isFalse);
+        expect(await service.distanceMeters(_resto1, _resto2), isNull);
+        expect(calls, 1);
+      },
+    );
 
     test('tanpa key tidak meminta ke server', () async {
       var calls = 0;

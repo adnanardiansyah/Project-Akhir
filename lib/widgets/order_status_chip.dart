@@ -9,12 +9,12 @@ class OrderStatusChip extends StatelessWidget {
 
   const OrderStatusChip({super.key, required this.status});
 
-  // Warna khas tiap status
+  // Warna khas tiap status menggunakan EmeraldColors semantik
   Color _colorFor(ColorScheme scheme) => switch (status) {
-    OrderStatus.pending => const Color(0xFFB45309),
-    OrderStatus.confirmed => brandGreen,
-    OrderStatus.paid => successGreen,
-    OrderStatus.cancelled => scheme.error,
+    OrderStatus.pending => EmeraldColors.warning,
+    OrderStatus.confirmed => EmeraldColors.primary,
+    OrderStatus.paid => EmeraldColors.success,
+    OrderStatus.cancelled => EmeraldColors.error,
   };
 
   IconData get _icon => switch (status) {
@@ -43,11 +43,15 @@ class OrderStatusChip extends StatelessWidget {
           children: [
             Icon(_icon, size: 16, color: color),
             const SizedBox(width: 6),
-            Text(
-              status.label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w700,
+            Flexible(
+              child: Text(
+                status.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],

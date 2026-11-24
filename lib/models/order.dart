@@ -2,12 +2,24 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'cart_item.dart';
 import 'field_parsers.dart';
+import 'payment_method.dart';
 
 // Status pesanan sesuai usulan U5
 enum OrderStatus { pending, confirmed, paid, cancelled }
 
-// Tahap pengantaran setelah pesanan dibayar.
+// Status pembayaran dipisahkan dari status pesanan agar COD bisa dikirim
+// sebelum uang diterima kurir.
+enum PaymentStatus { unpaid, paid }
+
+// Tahap pengantaran setelah pesanan siap dikirim.
 enum DeliveryStatus { assigned, inTransit, delivered }
+
+extension PaymentStatusLabel on PaymentStatus {
+  String get label => switch (this) {
+    PaymentStatus.unpaid => 'Belum dibayar',
+    PaymentStatus.paid => 'Sudah dibayar',
+  };
+}
 
 extension DeliveryStatusLabel on DeliveryStatus {
   String get label => switch (this) {
@@ -114,9 +126,11 @@ class FoodOrder {
   final int total;
   final OrderStatus status;
   final String? paymentMethod;
+  final PaymentStatus? paymentStatus;
   // Null sesaat setelah dibuat, sebelum waktu server tercatat
   final DateTime? createdAt;
   final DateTime? paidAt;
+  final String? codCollectedByUid;
   final String? assignedCourierUid;
   final String? assignedCourierName;
   final DeliveryStatus? deliveryStatus;
@@ -136,8 +150,10 @@ class FoodOrder {
     required this.total,
     required this.status,
     this.paymentMethod,
+    this.paymentStatus,
     this.createdAt,
     this.paidAt,
+    this.codCollectedByUid,
     this.assignedCourierUid,
     this.assignedCourierName,
     this.deliveryStatus,
@@ -147,6 +163,24 @@ class FoodOrder {
     this.deliveredAt,
   });
 
+  bool get isCodPayment => isCodMethodName(paymentMethod);
+
+  bool get isPaid =>
+      paymentStatus == PaymentStatus.paid || status == OrderStatus.paid;
+
+  // COD boleh ditugaskan sebelum dibayar; yang lunas tentu boleh dikirim.
+  bool get isReadyForCourier {
+    if (deliveryStatus == DeliveryStatus.inTransit ||
+        deliveryStatus == DeliveryStatus.delivered) {
+      return false;
+    }
+    return switch (status) {
+      OrderStatus.paid => true,
+      OrderStatus.confirmed => isCodPayment && !isPaid,
+      _ => false,
+    };
+  }
+
   // Membaca pesanan dari Firestore; null bila field inti tidak valid
   static FoodOrder? fromMap(String id, Map<String, dynamic> data) {
     final customerUid = data['customerUid'];
@@ -154,6 +188,12 @@ class FoodOrder {
     final total = data['total'];
     final rawItems = data['items'];
     final status = OrderStatus.values.asNameMap()[data['status']];
+    // Dokumen lama belum punya paymentStatus; paid berarti lunas, selainnya unpaid
+    final paymentStatus =
+        PaymentStatus.values.asNameMap()[data['paymentStatus']] ??
+        (status == OrderStatus.paid
+            ? PaymentStatus.paid
+            : PaymentStatus.unpaid);
     if (customerUid is! String || restaurantId is! String) return null;
     if (total is! int || rawItems is! List || status == null) return null;
     final items = rawItems.map(OrderItem.fromMap).toList();
@@ -171,8 +211,10 @@ class FoodOrder {
       total: total,
       status: status,
       paymentMethod: stringOrNull(data['paymentMethod']),
+      paymentStatus: paymentStatus,
       createdAt: _dateOrNull(data['createdAt']),
       paidAt: _dateOrNull(data['paidAt']),
+      codCollectedByUid: stringOrNull(data['codCollectedByUid']),
       assignedCourierUid: stringOrNull(data['assignedCourierUid']),
       assignedCourierName: stringOrNull(data['assignedCourierName']),
       deliveryStatus: DeliveryStatus.values.asNameMap()[data['deliveryStatus']],

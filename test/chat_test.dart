@@ -72,11 +72,20 @@ void main() {
       expect(message!.createdAt, isNull);
     });
 
+    test('peran admin dikenal', () {
+      final message = ChatMessage.fromMap('m', {
+        'senderUid': 'a1',
+        'senderRole': 'admin',
+        'text': 'hai',
+      });
+      expect(message!.senderRole, UserRole.admin);
+    });
+
     test('peran tidak dikenal atau field kurang ditolak', () {
       expect(
         ChatMessage.fromMap('m', {
           'senderUid': 'x',
-          'senderRole': 'admin',
+          'senderRole': 'superadmin',
           'text': 'hai',
         }),
         isNull,

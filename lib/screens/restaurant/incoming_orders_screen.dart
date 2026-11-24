@@ -4,11 +4,11 @@ import '../../models/app_user.dart';
 import '../../models/order.dart';
 import '../../models/restaurant.dart';
 import '../../services/app_services.dart';
+import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/logout_button.dart';
 import '../../widgets/order_card.dart';
 import '../../widgets/state_message.dart';
-import '../../widgets/welcome_banner.dart';
 import '../shared/order_detail_screen.dart';
 
 enum _RestaurantOrderFilter {
@@ -98,133 +98,137 @@ class _IncomingOrdersScreenState extends State<IncomingOrdersScreen> {
   Widget build(BuildContext context) {
     final restaurantId = widget.user.restaurantId;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pesanan Masuk'),
-        actions: [LogoutButton(authService: widget.services.auth)],
-      ),
-      body: restaurantId == null
-          ? const StateMessage(
-              icon: Icons.link_off_rounded,
-              title: 'Akun belum terhubung ke resto',
-              message: 'Hubungi pengelola aplikasi untuk mengisi restaurantId.',
-            )
-          : Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1120),
-                child: Column(
-                  children: [
-                    StreamBuilder<Restaurant?>(
-                      stream: widget.services.restaurants.watchRestaurant(
-                        restaurantId,
-                      ),
-                      builder: (context, snapshot) {
-                        final restaurant = snapshot.data;
-                        if (restaurant == null ||
-                            restaurant.reviewStatus ==
-                                RestaurantReviewStatus.approved) {
-                          return const SizedBox.shrink();
-                        }
-                        return _RestaurantReviewNotice(
-                          status: restaurant.reviewStatus,
-                        );
-                      },
-                    ),
-                    Expanded(
-                      child: StreamBuilder<List<FoodOrder>>(
-                        stream: _orders,
+      backgroundColor: EmeraldColors.background,
+      body: SafeArea(
+        child: restaurantId == null
+            ? const StateMessage(
+                icon: Icons.link_off_rounded,
+                title: 'Akun belum terhubung ke resto',
+                message: 'Hubungi pengelola aplikasi untuk mengisi restaurantId.',
+              )
+            : Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1120),
+                  child: Column(
+                    children: [
+                      StreamBuilder<Restaurant?>(
+                        stream: widget.services.restaurants.watchRestaurant(
+                          restaurantId,
+                        ),
                         builder: (context, snapshot) {
-                          if (snapshot.hasError) {
-                            return const StateMessage(
-                              icon: Icons.wifi_off_rounded,
-                              title: 'Pesanan gagal dimuat',
-                              message:
-                                  'Periksa koneksi atau akses Firestore, lalu coba lagi.',
-                            );
+                          final restaurant = snapshot.data;
+                          if (restaurant == null ||
+                              restaurant.reviewStatus ==
+                                  RestaurantReviewStatus.approved) {
+                            return const SizedBox.shrink();
                           }
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
+                          return _RestaurantReviewNotice(
+                            status: restaurant.reviewStatus,
+                          );
+                        },
+                      ),
+                      Expanded(
+                        child: StreamBuilder<List<FoodOrder>>(
+                          stream: _orders,
+                          builder: (context, snapshot) {
+                            if (snapshot.hasError) {
+                              return const StateMessage(
+                                icon: Icons.wifi_off_rounded,
+                                title: 'Pesanan gagal dimuat',
+                                message:
+                                    'Periksa koneksi atau akses Firestore, lalu coba lagi.',
+                              );
+                            }
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
 
-                          final orders = snapshot.data ?? const <FoodOrder>[];
-                          final counts = {
-                            for (final filter in _RestaurantOrderFilter.values)
-                              filter: filter.count(orders),
-                          };
-                          final query = _query.trim().toLowerCase();
-                          final visible = orders.where((order) {
-                            final matchesQuery =
-                                query.isEmpty ||
-                                order.customerName.toLowerCase().contains(
-                                  query,
-                                ) ||
-                                order.id.toLowerCase().contains(query);
-                            return matchesQuery && _filter.matches(order);
-                          }).toList();
+                            final orders = snapshot.data ?? const <FoodOrder>[];
+                            final counts = {
+                              for (final filter in _RestaurantOrderFilter.values)
+                                filter: filter.count(orders),
+                            };
+                            final query = _query.trim().toLowerCase();
+                            final visible = orders.where((order) {
+                              final matchesQuery =
+                                  query.isEmpty ||
+                                  order.customerName.toLowerCase().contains(
+                                    query,
+                                  ) ||
+                                  order.id.toLowerCase().contains(query);
+                              return matchesQuery && _filter.matches(order);
+                            }).toList();
 
-                          return ListView(
-                            padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
-                            children: [
-                              _Header(name: widget.user.displayName),
-                              const SizedBox(height: 18),
-                              Text(
-                                'Ringkasan pesanan',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              const SizedBox(height: 10),
-                              LayoutBuilder(
-                                builder: (context, constraints) =>
-                                    GridView.count(
-                                      crossAxisCount:
-                                          constraints.maxWidth >= 720 ? 4 : 2,
-                                      crossAxisSpacing: 10,
-                                      mainAxisSpacing: 10,
-                                      childAspectRatio:
-                                          constraints.maxWidth >= 720
-                                          ? 2.5
-                                          : 1.8,
-                                      shrinkWrap: true,
-                                      physics:
-                                          const NeverScrollableScrollPhysics(),
-                                      children: [
-                                        _RestaurantMetric(
-                                          label: 'Pesanan baru',
-                                          value:
-                                              counts[_RestaurantOrderFilter
-                                                  .newOrders]!,
-                                          icon: Icons
-                                              .notifications_active_outlined,
-                                          color: const Color(0xFFB45309),
-                                        ),
-                                        _RestaurantMetric(
-                                          label: 'Dikonfirmasi',
-                                          value:
-                                              counts[_RestaurantOrderFilter
-                                                  .processing]!,
-                                          icon: Icons.restaurant_outlined,
-                                          color: const Color(0xFF2563A6),
-                                        ),
-                                        _RestaurantMetric(
-                                          label: 'Sudah dibayar',
-                                          value:
-                                              counts[_RestaurantOrderFilter
-                                                  .paid]!,
-                                          icon: Icons.payments_outlined,
-                                          color: successGreen,
-                                        ),
-                                        _RestaurantMetric(
-                                          label: 'Sudah diantar',
-                                          value:
-                                              counts[_RestaurantOrderFilter
-                                                  .delivered]!,
-                                          icon: Icons.task_alt_rounded,
-                                          color: successGreen,
-                                        ),
-                                      ],
-                                    ),
-                              ),
+                            return ListView(
+                              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                              children: [
+                                _Header(
+                                  name: widget.user.displayName,
+                                  authService: widget.services.auth,
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  'Ringkasan Pesanan',
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    color: EmeraldColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                LayoutBuilder(
+                                  builder: (context, constraints) =>
+                                      GridView.count(
+                                        crossAxisCount:
+                                            constraints.maxWidth >= 720 ? 4 : 2,
+                                        crossAxisSpacing: 12,
+                                        mainAxisSpacing: 12,
+                                        childAspectRatio:
+                                            constraints.maxWidth >= 720
+                                            ? 1.9
+                                            : 1.25,
+                                        shrinkWrap: true,
+                                        physics:
+                                            const NeverScrollableScrollPhysics(),
+                                        children: [
+                                          _RestaurantMetric(
+                                            label: 'Pesanan baru',
+                                            value:
+                                                counts[_RestaurantOrderFilter
+                                                    .newOrders]!,
+                                            icon: Icons
+                                                .notifications_active_outlined,
+                                            color: EmeraldColors.warning,
+                                          ),
+                                          _RestaurantMetric(
+                                            label: 'Dikonfirmasi',
+                                            value:
+                                                counts[_RestaurantOrderFilter
+                                                    .processing]!,
+                                            icon: Icons.restaurant_outlined,
+                                            color: const Color(0xFF2563EB),
+                                          ),
+                                          _RestaurantMetric(
+                                            label: 'Sudah dibayar',
+                                            value:
+                                                counts[_RestaurantOrderFilter
+                                                    .paid]!,
+                                            icon: Icons.payments_outlined,
+                                            color: EmeraldColors.success,
+                                          ),
+                                          _RestaurantMetric(
+                                            label: 'Sudah diantar',
+                                            value:
+                                                counts[_RestaurantOrderFilter
+                                                    .delivered]!,
+                                            icon: Icons.task_alt_rounded,
+                                            color: EmeraldColors.primary,
+                                          ),
+                                        ],
+                                      ),
+                                ),
                               const SizedBox(height: 18),
                               TextField(
                                 controller: _searchController,
@@ -311,6 +315,7 @@ class _IncomingOrdersScreenState extends State<IncomingOrdersScreen> {
                 ),
               ),
             ),
+      ),
     );
   }
 }
@@ -330,43 +335,52 @@ class _RestaurantMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: EmeraldColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: EmeraldColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color, size: 20),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$value',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: scheme.onSurface,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 10),
+            Text(
+              '$value',
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                color: EmeraldColors.textPrimary,
+                height: 1,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              maxLines: 2,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: EmeraldColors.textSecondary,
               ),
             ),
           ],
@@ -383,49 +397,56 @@ class _RestaurantReviewNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final (title, message, color) = switch (status) {
       RestaurantReviewStatus.pending => (
         'Listing restoran menunggu tinjauan',
         'Admin akan menyetujui restoran sebelum muncul di katalog pemesan. '
             'Menu restoran perlu disiapkan melalui pengelola.',
-        const Color(0xFFB45309),
+        EmeraldColors.warning,
       ),
       RestaurantReviewStatus.rejected => (
         'Listing restoran ditolak',
         'Hubungi admin untuk mengetahui data yang perlu diperbaiki.',
-        scheme.error,
+        EmeraldColors.error,
       ),
       RestaurantReviewStatus.suspended => (
         'Listing restoran ditangguhkan',
         'Hubungi admin untuk mengaktifkan kembali restoran.',
-        scheme.onSurfaceVariant,
+        EmeraldColors.textSecondary,
       ),
-      RestaurantReviewStatus.approved => ('', '', scheme.primary),
+      RestaurantReviewStatus.approved => ('', '', EmeraldColors.primary),
     };
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, color: color),
-          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.info_outline_rounded, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: TextStyle(color: color, fontWeight: FontWeight.w700),
+                  style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13),
                 ),
                 const SizedBox(height: 4),
-                Text(message, style: TextStyle(color: scheme.onSurfaceVariant)),
+                Text(message, style: const TextStyle(color: EmeraldColors.textSecondary, fontSize: 12)),
               ],
             ),
           ),
@@ -435,21 +456,71 @@ class _RestaurantReviewNotice extends StatelessWidget {
   }
 }
 
-// Banner resto di atas daftar pesanan.
+// Banner resto modern di atas daftar pesanan
 class _Header extends StatelessWidget {
   final String name;
+  final AuthService authService;
 
-  const _Header({required this.name});
+  const _Header({required this.name, required this.authService});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: WelcomeBanner(
-        eyebrow: 'Panel resto',
-        title: name,
-        subtitle: 'Pantau pesanan dan chat pelanggan di sini.',
-        icon: Icons.storefront_rounded,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [EmeraldColors.primaryDeep, EmeraldColors.primary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: EmeraldColors.primary.withValues(alpha: 0.28),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 26),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Panel Restoran',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          LogoutButton(authService: authService),
+        ],
       ),
     );
   }

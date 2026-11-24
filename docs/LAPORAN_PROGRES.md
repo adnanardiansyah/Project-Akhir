@@ -28,6 +28,7 @@ Fitur tracking mengirim lokasi GPS selama layar kurir tetap terbuka. Alur lengka
 - Kurir dapat memulai pengantaran, mengirim lokasi GPS ke Firestore, dan menyelesaikan pengantaran.
 - Pemesan dapat melihat posisi kurir pada peta OpenStreetMap di detail pesanan.
 - Tampilan menggunakan latar terang dan palet emerald.
+- Redesign menyeluruh berkonsep Emerald Premium: Home page multi-tab dengan Header lokasi GPS, Search Bar interaktif, Promo Banner Carousel, Kategori Makanan horizontal, Resto Cards modern, Menu Populer showcase, Floating Cart Bar, serta Dashboard Admin responsif berformat SaaS.
 
 ## Alur pesanan dan pengantaran
 

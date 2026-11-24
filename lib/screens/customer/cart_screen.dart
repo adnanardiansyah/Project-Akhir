@@ -9,16 +9,15 @@ import '../../models/cart_item.dart';
 import '../../services/app_services.dart';
 import '../../services/firestore_write.dart';
 import '../../services/location_service.dart';
+import '../../theme/app_theme.dart';
 import '../../utils/format_rupiah.dart';
 import '../../widgets/error_snack_bar.dart';
-import '../../widgets/fade_slide_in.dart';
 import '../../widgets/loading_button.dart';
 import '../../widgets/quantity_stepper.dart';
 import '../../widgets/restaurant_avatar.dart';
-import '../../widgets/state_message.dart';
 import '../shared/order_detail_screen.dart';
 
-// Layar keranjang: atur jumlah, lihat total, lalu buat pesanan
+/// Layar Keranjang & Checkout Modern dengan Konsep Emerald Premium.
 class CartScreen extends StatefulWidget {
   final AppUser user;
   final AppServices services;
@@ -35,7 +34,6 @@ class CartScreen extends StatefulWidget {
   State<CartScreen> createState() => _CartScreenState();
 }
 
-// Menunggu konfirmasi server tanpa mengizinkan pesanan yang sama dikirim dua kali.
 class _CartScreenState extends State<CartScreen> {
   bool _waitingForServer = false;
   bool _isLoadingDeliveryLocation = false;
@@ -47,6 +45,10 @@ class _CartScreenState extends State<CartScreen> {
   void initState() {
     super.initState();
     _schedulePendingNotice();
+    // Otomatis deteksi GPS untuk kemudahan pemesan
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _captureDeliveryLocation();
+    });
   }
 
   @override
@@ -75,7 +77,6 @@ class _CartScreenState extends State<CartScreen> {
     });
   }
 
-  // Mengambil titik GPS terbaru sebagai tujuan tetap untuk pesanan ini.
   Future<void> _captureDeliveryLocation() async {
     if (_isLoadingDeliveryLocation || widget.cart.isSubmittingOrder) return;
     setState(() {
@@ -99,20 +100,21 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   String _locationIssueMessage(LocationIssue? issue) => switch (issue) {
-    LocationIssue.serviceDisabled => 'Aktifkan GPS untuk mengambil lokasi.',
-    LocationIssue.permissionDenied => 'Izin lokasi belum diberikan.',
+    LocationIssue.serviceDisabled =>
+      'Aktifkan GPS ponsel untuk mengambil lokasi.',
+    LocationIssue.permissionDenied => 'Izin akses lokasi belum diberikan.',
     LocationIssue.permissionDeniedForever =>
       'Izinkan akses lokasi lewat Pengaturan perangkat.',
-    LocationIssue.unavailable || null => 'Lokasi perangkat tidak terbaca.',
+    LocationIssue.unavailable ||
+    null => 'Gagal membaca koordinat GPS perangkat.',
   };
 
-  // Menulis pesanan ke Firestore, mengosongkan keranjang, lalu membuka detail pesanan
   Future<void> _submit() async {
     if (_isLoadingDeliveryLocation) return;
     if (_deliveryLocation == null) {
       showErrorSnackBar(
         context,
-        'Tentukan titik pengantaran sebelum membuat pesanan.',
+        'Pastikan GPS aktif dan titik pengantaran telah terbaca.',
       );
       return;
     }
@@ -123,6 +125,7 @@ class _CartScreenState extends State<CartScreen> {
     }
     setState(() => _waitingForServer = false);
     _schedulePendingNotice();
+
     try {
       final orderId = await widget.services.orders.createOrder(
         customerUid: widget.user.uid,
@@ -161,291 +164,535 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Keranjang')),
+      backgroundColor: EmeraldColors.background,
+      appBar: AppBar(
+        title: const Text('Keranjang Belanja'),
+        elevation: 0,
+        backgroundColor: Colors.white,
+      ),
       body: ListenableBuilder(
         listenable: widget.cart,
         builder: (context, _) {
           final cart = widget.cart;
           final restaurant = cart.restaurant;
+
           if (cart.isEmpty || restaurant == null) {
-            return const StateMessage(
-              icon: Icons.shopping_bag_outlined,
-              title: 'Keranjang kosong',
-              message: 'Pilih menu dari resto untuk mulai memesan.',
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: const BoxDecoration(
+                        color: EmeraldColors.softGreen,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.shopping_bag_outlined,
+                        color: EmeraldColors.primary,
+                        size: 56,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Keranjang Masih Kosong',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: EmeraldColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Pilih makanan lezat dari resto favoritmu di Lhokseumawe dan buat pesanan sekarang.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: EmeraldColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             );
           }
+
           final items = cart.items;
+
           return Column(
             children: [
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                   children: [
-                    FadeSlideIn(
+                    // Info Restoran
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: EmeraldColors.border),
+                      ),
                       child: Row(
                         children: [
                           RestaurantAvatar(
                             restaurantId: restaurant.id,
-                            size: 44,
-                            heroEnabled: false,
+                            size: 48,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text(
-                              restaurant.name,
-                              style: Theme.of(context).textTheme.titleLarge,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  restaurant.name,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: EmeraldColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Pesanan dari restoran ini',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: EmeraldColors.textSecondary,
+                                  ),
+                                ),
+                              ],
                             ),
+                          ),
+                          TextButton(
+                            onPressed: () => cart.clear(),
+                            style: TextButton.styleFrom(
+                              foregroundColor: EmeraldColors.error,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                            ),
+                            child: const Text('Kosongkan'),
                           ),
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 16),
-                    _DeliveryLocationCard(
-                      location: _deliveryLocation,
-                      isLoading: _isLoadingDeliveryLocation,
-                      isDisabled: cart.isSubmittingOrder,
-                      errorMessage: _deliveryLocationError,
-                      onCapture: _captureDeliveryLocation,
-                    ),
-                    const SizedBox(height: 12),
-                    for (final (index, item) in items.indexed) ...[
-                      FadeSlideIn(
-                        index: index + 1,
-                        child: _CartItemCard(
-                          item: item,
-                          cart: cart,
-                          isDisabled: cart.isSubmittingOrder,
-                        ),
+
+                    // Daftar Item Makanan
+                    ...items.map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _buildCartItemCard(item),
                       ),
-                      const SizedBox(height: 12),
-                    ],
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // Lokasi Pengantaran (GPS Capture)
+                    _buildDeliveryLocationCard(),
+
+                    const SizedBox(height: 14),
+
+                    // Ringkasan Pembayaran
+                    _buildPaymentSummaryCard(cart),
                   ],
                 ),
               ),
-              _CheckoutPanel(
-                total: cart.total,
-                isSubmitting: cart.isSubmittingOrder,
-                isWaitingForServer: _waitingForServer,
-                onSubmit: _isLoadingDeliveryLocation ? null : _submit,
-              ),
+
+              // Bottom Checkout Bar
+              _buildCheckoutBottomBar(cart),
             ],
           );
         },
       ),
     );
   }
-}
 
-// Menampilkan dan mengambil titik tujuan yang disalin ke dokumen pesanan.
-class _DeliveryLocationCard extends StatelessWidget {
-  final GeoPoint? location;
-  final bool isLoading;
-  final bool isDisabled;
-  final String? errorMessage;
-  final VoidCallback onCapture;
-
-  const _DeliveryLocationCard({
-    required this.location,
-    required this.isLoading,
-    required this.isDisabled,
-    required this.errorMessage,
-    required this.onCapture,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-    final coordinateText = location == null
-        ? 'Wajib ditentukan agar kurir dapat menemukan titik pengantaran.'
-        : 'Lat ${location!.latitude.toStringAsFixed(5)}, '
-              'Lng ${location!.longitude.toStringAsFixed(5)}. '
-              'Titik ini tetap untuk pesanan ini.';
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+  Widget _buildCartItemCard(CartItem item) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: EmeraldColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: EmeraldColors.softGreen,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.restaurant_rounded,
+              color: EmeraldColors.primary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.location_on_outlined, color: scheme.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Titik pengantaran', style: text.titleSmall),
-                      const SizedBox(height: 4),
-                      Text(
-                        coordinateText,
-                        style: text.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                      if (errorMessage != null) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          errorMessage!,
-                          style: text.bodySmall?.copyWith(color: scheme.error),
-                        ),
-                      ],
-                    ],
+                Text(
+                  item.menuItem.name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: EmeraldColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  formatRupiah(item.menuItem.price),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: EmeraldColors.primaryDark,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: isDisabled || isLoading ? null : onCapture,
-              icon: isLoading
-                  ? const SizedBox.square(
-                      dimension: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.my_location_rounded),
-              label: Text(
-                location == null ? 'Gunakan lokasi saat ini' : 'Perbarui titik',
-              ),
-            ),
-          ],
-        ),
+          ),
+          QuantityStepper(
+            quantity: item.quantity,
+            onIncrement: widget.cart.isSubmittingOrder
+                ? null
+                : () => widget.cart.add(widget.cart.restaurant!, item.menuItem),
+            onDecrement: widget.cart.isSubmittingOrder
+                ? null
+                : () => widget.cart.decrement(item.menuItem.id),
+          ),
+        ],
       ),
     );
   }
-}
 
-// Kartu satu baris keranjang: nama, harga satuan, subtotal, pengatur jumlah
-class _CartItemCard extends StatelessWidget {
-  final CartItem item;
-  final CartController cart;
-  final bool isDisabled;
-
-  const _CartItemCard({
-    required this.item,
-    required this.cart,
-    required this.isDisabled,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-    final restaurant = cart.restaurant!;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.menuItem.name, style: text.titleMedium),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${formatRupiah(item.menuItem.price)} × ${item.quantity}'
-                    ' = ${formatRupiah(item.subtotal)}',
-                    style: text.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            QuantityStepper(
-              quantity: item.quantity,
-              onIncrement: isDisabled
-                  ? null
-                  : () => cart.add(restaurant, item.menuItem),
-              onDecrement: isDisabled
-                  ? null
-                  : () => cart.decrement(item.menuItem.id),
-            ),
-          ],
-        ),
+  Widget _buildDeliveryLocationCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: EmeraldColors.border),
       ),
-    );
-  }
-}
-
-// Panel bawah: total dan tombol buat pesanan
-class _CheckoutPanel extends StatelessWidget {
-  final int total;
-  final bool isSubmitting;
-  final bool isWaitingForServer;
-  final VoidCallback? onSubmit;
-
-  const _CheckoutPanel({
-    required this.total,
-    required this.isSubmitting,
-    required this.isWaitingForServer,
-    required this.onSubmit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: scheme.surfaceContainerLow,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Expanded(child: Text('Total', style: text.titleMedium)),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: Text(
-                      formatRupiah(total),
-                      key: ValueKey(total),
-                      style: text.headlineSmall?.copyWith(
-                        color: scheme.primary,
-                        fontWeight: FontWeight.w800,
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: EmeraldColors.softGreen,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.location_on_rounded,
+                        color: EmeraldColors.primary,
+                        size: 16,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              if (isWaitingForServer) ...[
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.cloud_sync_outlined,
-                      size: 18,
-                      color: scheme.onSurfaceVariant,
-                    ),
                     const SizedBox(width: 8),
-                    Expanded(
+                    Flexible(
                       child: Text(
-                        'Pesanan belum dikonfirmasi server. Tunggu koneksi; '
-                        'jangan kirim pesanan lagi.',
-                        style: text.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
+                        'Titik Pengantaran Kurir (GPS)',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: EmeraldColors.textPrimary,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ],
-              const SizedBox(height: 16),
-              LoadingButton(
-                label: 'Buat Pesanan',
-                isLoading: isSubmitting,
-                onPressed: onSubmit,
+              ),
+              InkWell(
+                onTap: _isLoadingDeliveryLocation
+                    ? null
+                    : _captureDeliveryLocation,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 4,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_isLoadingDeliveryLocation)
+                        const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: EmeraldColors.primary,
+                          ),
+                        )
+                      else
+                        const Icon(
+                          Icons.refresh_rounded,
+                          size: 15,
+                          color: EmeraldColors.primary,
+                        ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _isLoadingDeliveryLocation ? 'Membaca...' : 'Perbarui',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: EmeraldColors.primaryDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 10),
+          if (_deliveryLocation != null)
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: EmeraldColors.softGreenLight,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: EmeraldColors.accent.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.check_circle_rounded,
+                    color: EmeraldColors.success,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Terkunci: ${_deliveryLocation!.latitude.toStringAsFixed(5)}, '
+                      '${_deliveryLocation!.longitude.toStringAsFixed(5)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: EmeraldColors.primaryDeep,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Text(
+              _deliveryLocationError ??
+                  'Ketuk perbarui untuk merekam GPS pengantaran.',
+              style: TextStyle(
+                fontSize: 12,
+                color: _deliveryLocationError != null
+                    ? EmeraldColors.error
+                    : EmeraldColors.textSecondary,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentSummaryCard(CartController cart) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: EmeraldColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Ringkasan Pembayaran',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: EmeraldColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'Subtotal (${cart.totalQuantity} menu)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: EmeraldColors.textSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  formatRupiah(cart.total),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: EmeraldColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  'Biaya Layanan & Pengantaran',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: EmeraldColors.textSecondary,
+                  ),
+                ),
+              ),
+              SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'Rp 0 (Simulasi)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: EmeraldColors.success,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Flexible(
+                child: Text(
+                  'Total Tagihan',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: EmeraldColors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  formatRupiah(cart.total),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: EmeraldColors.primaryDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckoutBottomBar(CartController cart) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: EmeraldColors.border)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_waitingForServer)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text(
+                'Sedang menunggu konfirmasi server...',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: EmeraldColors.warning,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          Row(
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'TOTAL PESANAN',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: EmeraldColors.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  Text(
+                    formatRupiah(cart.total),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: EmeraldColors.primaryDark,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: LoadingButton(
+                  label: 'Buat Pesanan',
+                  isLoading: cart.isSubmittingOrder,
+                  icon: Icons.check_circle_rounded,
+                  onPressed: _deliveryLocation == null ? null : _submit,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

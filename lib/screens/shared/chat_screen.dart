@@ -295,7 +295,17 @@ class _SuggestionRow extends StatelessWidget {
           final suggestion = _customerSuggestions[index];
           return Center(
             child: ActionChip(
-              label: Text(suggestion),
+              backgroundColor: EmeraldColors.softGreenLight,
+              side: BorderSide(color: EmeraldColors.accent.withValues(alpha: 0.4)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              label: Text(
+                suggestion,
+                style: const TextStyle(
+                  color: EmeraldColors.primaryDark,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+              ),
               onPressed: onSelected == null
                   ? null
                   : () => onSelected!(suggestion),

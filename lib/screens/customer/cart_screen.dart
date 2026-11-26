@@ -237,6 +237,7 @@ class _CartScreenState extends State<CartScreen> {
                         children: [
                           RestaurantAvatar(
                             restaurantId: restaurant.id,
+                            restaurantName: restaurant.name,
                             size: 48,
                           ),
                           const SizedBox(width: 12),

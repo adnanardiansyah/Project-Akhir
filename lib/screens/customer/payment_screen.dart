@@ -8,6 +8,7 @@ import '../../utils/format_rupiah.dart';
 import '../../widgets/error_snack_bar.dart';
 import '../../widgets/fade_slide_in.dart';
 import '../../widgets/loading_button.dart';
+import '../../widgets/payment_receipt.dart';
 import '../../widgets/restaurant_avatar.dart';
 
 /// Layar Pembayaran Simulasi dengan Konsep Emerald Premium.
@@ -26,6 +27,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   bool _isPaying = false;
   bool _isDone = false;
   bool _isCod = false;
+  DateTime? _paidAt;
 
   // COD hanya dipilih sekarang; uang diterima kurir saat pesanan tiba
   Future<void> _confirm() async {
@@ -41,6 +43,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (mounted) {
         setState(() {
           _isCod = method == PaymentMethod.cod;
+          _paidAt = _isCod ? null : DateTime.now();
           _isDone = true;
         });
       }
@@ -75,9 +78,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
         child: _isDone
             ? _PaymentSuccess(
                 key: const ValueKey('done'),
-                total: widget.order.total,
+                order: widget.order,
                 method: _selected!,
                 isCod: _isCod,
+                paidAt: _paidAt,
                 onDone: () => Navigator.of(context).pop(),
               )
             : _buildForm(context),
@@ -212,6 +216,7 @@ class _OrderSummary extends StatelessWidget {
         children: [
           RestaurantAvatar(
             restaurantId: order.restaurantId,
+            restaurantName: order.restaurantName,
             size: 48,
             heroEnabled: false,
           ),
@@ -346,16 +351,18 @@ class _MethodTile extends StatelessWidget {
 }
 
 class _PaymentSuccess extends StatelessWidget {
-  final int total;
+  final FoodOrder order;
   final PaymentMethod method;
   final bool isCod;
+  final DateTime? paidAt;
   final VoidCallback onDone;
 
   const _PaymentSuccess({
     super.key,
-    required this.total,
+    required this.order,
     required this.method,
     required this.isCod,
+    required this.paidAt,
     required this.onDone,
   });
 
@@ -364,37 +371,41 @@ class _PaymentSuccess extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 700),
-              curve: Curves.elasticOut,
-              builder: (context, value, child) =>
-                  Transform.scale(scale: value, child: child),
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: EmeraldColors.softGreen,
-                ),
-                child: const Icon(
-                  Icons.check_circle_rounded,
-                  size: 68,
-                  color: EmeraldColors.primary,
+            Center(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.elasticOut,
+                builder: (context, value, child) =>
+                    Transform.scale(scale: value, child: child),
+                child: Container(
+                  width: 88,
+                  height: 88,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: EmeraldColors.softGreen,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    size: 60,
+                    color: EmeraldColors.primary,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
             FadeSlideIn(
-              index: 2,
+              index: 1,
               child: Column(
                 children: [
                   Text(
                     isCod ? 'Metode COD Dipilih' : 'Pembayaran Sukses!',
+                    textAlign: TextAlign.center,
                     style: text.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: EmeraldColors.textPrimary,
@@ -403,8 +414,8 @@ class _PaymentSuccess extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     isCod
-                        ? 'Siapkan ${formatRupiah(total)} tunai. Bayar langsung ke kurir saat pesanan tiba.'
-                        : 'Total ${formatRupiah(total)} telah terbayar menggunakan ${method.label}. Resto akan segera memproses pesananmu.',
+                        ? 'Siapkan ${formatRupiah(order.total)} tunai. Bayar langsung ke kurir saat pesanan tiba.'
+                        : 'Total ${formatRupiah(order.total)} telah terbayar menggunakan ${method.label}.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 14,
@@ -412,13 +423,20 @@ class _PaymentSuccess extends StatelessWidget {
                       height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  FilledButton(
-                    onPressed: onDone,
-                    child: const Text('Kembali ke Detail Pesanan'),
-                  ),
                 ],
               ),
+            ),
+            const SizedBox(height: 20),
+            PaymentReceipt(
+              order: order,
+              method: method,
+              isCod: isCod,
+              paidAt: paidAt,
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: onDone,
+              child: const Text('Kembali ke Detail Pesanan'),
             ),
           ],
         ),

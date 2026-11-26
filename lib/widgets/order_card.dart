@@ -37,6 +37,7 @@ class OrderCard extends StatelessWidget {
             children: [
               RestaurantAvatar(
                 restaurantId: order.restaurantId,
+                restaurantName: order.restaurantName,
                 size: 46,
                 heroEnabled: false,
               ),

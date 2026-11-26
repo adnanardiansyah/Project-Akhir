@@ -319,7 +319,11 @@ class _MenuScreenState extends State<MenuScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  RestaurantAvatar(restaurantId: r.id, size: 64),
+                  RestaurantAvatar(
+                    restaurantId: r.id,
+                    restaurantName: r.name,
+                    size: 64,
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(

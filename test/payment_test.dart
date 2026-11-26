@@ -23,11 +23,18 @@ const _confirmedOrder = FoodOrder(
   status: OrderStatus.confirmed,
 );
 
-// Service asli; Firebase tidak disentuh selama tombol Bayar tidak ditekan
-AppServices _services() => AppServices(
+class _FakeOrderService extends OrderService {
+  @override
+  Future<void> payOrder(String orderId, PaymentMethod method) async {}
+
+  @override
+  Future<void> chooseCodPayment(String orderId) async {}
+}
+
+AppServices _services({OrderService? orders}) => AppServices(
   auth: AuthService(),
   restaurants: RestaurantService(),
-  orders: OrderService(),
+  orders: orders ?? OrderService(),
   chat: ChatService(),
   location: LocationService(),
   routeDistance: RouteDistanceService(),
@@ -96,6 +103,60 @@ void main() {
 
       expect(find.text('COD (Bayar di Tempat)'), findsOneWidget);
       expect(find.text('Bayar tunai saat kurir tiba'), findsOneWidget);
+    });
+
+    testWidgets('struk lunas muncul setelah pembayaran sukses', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PaymentScreen(
+            order: _confirmedOrder,
+            services: _services(orders: _FakeOrderService()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('E-Wallet'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Konfirmasi Bayar Rp 30.000'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Struk Pembayaran'), findsOneWidget);
+      expect(find.text('Pembayaran Sukses!'), findsOneWidget);
+      expect(find.text('LUNAS'), findsNWidgets(2));
+      expect(find.text('BELUM DIBAYAR'), findsOneWidget);
+      expect(find.text('#o1'), findsOneWidget);
+      expect(find.text('Mie Aceh Contoh'), findsOneWidget);
+      expect(find.text('2x Mie Aceh'), findsOneWidget);
+    });
+
+    testWidgets('struk COD tidak menampilkan cap lunas', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PaymentScreen(
+            order: _confirmedOrder,
+            services: _services(orders: _FakeOrderService()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('COD (Bayar di Tempat)'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(FilledButton, 'Pilih COD Rp 30.000'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Struk Pesanan'), findsOneWidget);
+      expect(find.text('Metode COD Dipilih'), findsOneWidget);
+      expect(
+        find.text('Bayar tunai ke kurir saat pesanan tiba'),
+        findsOneWidget,
+      );
+      expect(find.text('LUNAS'), findsNothing);
     });
   });
 }

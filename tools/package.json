@@ -1,0 +1,16 @@
+{
+  "name": "lhokseumawe-firestore-import",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "import:menu": "node import_menu_firestore.js",
+    "menu:dry": "node import_menu_firestore.js --dry-run",
+    "menu:apply": "node import_menu_firestore.js --apply"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.1"
+  }
+}

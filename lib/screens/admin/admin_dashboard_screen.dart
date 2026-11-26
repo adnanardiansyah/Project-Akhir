@@ -697,13 +697,14 @@ class _DashboardMetric extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.bottomLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
                       '$value',
                       style: const TextStyle(
                         fontSize: 26,
@@ -712,19 +713,22 @@ class _DashboardMetric extends StatelessWidget {
                         height: 1,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: EmeraldColors.textSecondary,
+                    const SizedBox(height: 3),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 150),
+                      child: Text(
+                        label,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: EmeraldColors.textSecondary,
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -1000,6 +1004,7 @@ class _RestaurantReviewCard extends StatelessWidget {
               children: [
                 RestaurantAvatar(
                   restaurantId: restaurant.id,
+                  restaurantName: restaurant.name,
                   size: 48,
                   heroEnabled: false,
                 ),
@@ -1465,6 +1470,7 @@ class _AdminOrderCardState extends State<_AdminOrderCard> {
               children: [
                 RestaurantAvatar(
                   restaurantId: order.restaurantId,
+                  restaurantName: order.restaurantName,
                   size: 44,
                   heroEnabled: false,
                 ),

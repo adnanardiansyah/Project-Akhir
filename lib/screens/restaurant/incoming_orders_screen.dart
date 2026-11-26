@@ -104,7 +104,8 @@ class _IncomingOrdersScreenState extends State<IncomingOrdersScreen> {
             ? const StateMessage(
                 icon: Icons.link_off_rounded,
                 title: 'Akun belum terhubung ke resto',
-                message: 'Hubungi pengelola aplikasi untuk mengisi restaurantId.',
+                message:
+                    'Hubungi pengelola aplikasi untuk mengisi restaurantId.',
               )
             : Center(
                 child: ConstrainedBox(
@@ -148,7 +149,8 @@ class _IncomingOrdersScreenState extends State<IncomingOrdersScreen> {
 
                             final orders = snapshot.data ?? const <FoodOrder>[];
                             final counts = {
-                              for (final filter in _RestaurantOrderFilter.values)
+                              for (final filter
+                                  in _RestaurantOrderFilter.values)
                                 filter: filter.count(orders),
                             };
                             final query = _query.trim().toLowerCase();
@@ -163,7 +165,12 @@ class _IncomingOrdersScreenState extends State<IncomingOrdersScreen> {
                             }).toList();
 
                             return ListView(
-                              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                              padding: const EdgeInsets.fromLTRB(
+                                20,
+                                16,
+                                20,
+                                32,
+                              ),
                               children: [
                                 _Header(
                                   name: widget.user.displayName,
@@ -172,10 +179,11 @@ class _IncomingOrdersScreenState extends State<IncomingOrdersScreen> {
                                 const SizedBox(height: 20),
                                 Text(
                                   'Ringkasan Pesanan',
-                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: EmeraldColors.textPrimary,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        color: EmeraldColors.textPrimary,
+                                      ),
                                 ),
                                 const SizedBox(height: 12),
                                 LayoutBuilder(
@@ -229,92 +237,101 @@ class _IncomingOrdersScreenState extends State<IncomingOrdersScreen> {
                                         ],
                                       ),
                                 ),
-                              const SizedBox(height: 18),
-                              TextField(
-                                controller: _searchController,
-                                onChanged: (value) =>
-                                    setState(() => _query = value),
-                                textInputAction: TextInputAction.search,
-                                decoration: InputDecoration(
-                                  hintText: 'Cari nama pemesan atau ID pesanan',
-                                  prefixIcon: const Icon(Icons.search_rounded),
-                                  suffixIcon: _query.isEmpty
-                                      ? null
-                                      : IconButton(
-                                          tooltip: 'Hapus pencarian',
-                                          onPressed: () {
-                                            _searchController.clear();
-                                            setState(() => _query = '');
-                                          },
-                                          icon: const Icon(Icons.close_rounded),
-                                        ),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Row(
-                                  children: [
-                                    for (final filter
-                                        in _RestaurantOrderFilter.values) ...[
-                                      ChoiceChip(
-                                        label: Text(
-                                          '${filter.label} (${counts[filter]})',
-                                        ),
-                                        selected: _filter == filter,
-                                        onSelected: (_) =>
-                                            setState(() => _filter = filter),
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Pesanan',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Buka pesanan untuk melihat rincian, mengonfirmasi, atau chat dengan pemesan.',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
+                                const SizedBox(height: 18),
+                                TextField(
+                                  controller: _searchController,
+                                  onChanged: (value) =>
+                                      setState(() => _query = value),
+                                  textInputAction: TextInputAction.search,
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        'Cari nama pemesan atau ID pesanan',
+                                    prefixIcon: const Icon(
+                                      Icons.search_rounded,
                                     ),
-                              ),
-                              const SizedBox(height: 10),
-                              if (visible.isEmpty)
-                                StateMessage(
-                                  icon: Icons.receipt_long_outlined,
-                                  title: orders.isEmpty
-                                      ? 'Belum ada pesanan'
-                                      : 'Pesanan tidak ditemukan',
-                                  message: orders.isEmpty
-                                      ? 'Pesanan baru akan muncul di sini secara langsung.'
-                                      : 'Ubah kata pencarian atau filter status.',
-                                )
-                              else
-                                for (final order in visible)
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: OrderCard(
-                                      order: order,
-                                      title: order.customerName,
-                                      onTap: () => _openOrder(context, order),
-                                    ),
+                                    suffixIcon: _query.isEmpty
+                                        ? null
+                                        : IconButton(
+                                            tooltip: 'Hapus pencarian',
+                                            onPressed: () {
+                                              _searchController.clear();
+                                              setState(() => _query = '');
+                                            },
+                                            icon: const Icon(
+                                              Icons.close_rounded,
+                                            ),
+                                          ),
                                   ),
-                            ],
-                          );
-                        },
+                                ),
+                                const SizedBox(height: 10),
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: [
+                                      for (final filter
+                                          in _RestaurantOrderFilter.values) ...[
+                                        ChoiceChip(
+                                          label: Text(
+                                            '${filter.label} (${counts[filter]})',
+                                          ),
+                                          selected: _filter == filter,
+                                          onSelected: (_) =>
+                                              setState(() => _filter = filter),
+                                        ),
+                                        const SizedBox(width: 8),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Pesanan',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Buka pesanan untuk melihat rincian, mengonfirmasi, atau chat dengan pemesan.',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                                const SizedBox(height: 10),
+                                if (visible.isEmpty)
+                                  StateMessage(
+                                    icon: Icons.receipt_long_outlined,
+                                    title: orders.isEmpty
+                                        ? 'Belum ada pesanan'
+                                        : 'Pesanan tidak ditemukan',
+                                    message: orders.isEmpty
+                                        ? 'Pesanan baru akan muncul di sini secara langsung.'
+                                        : 'Ubah kata pencarian atau filter status.',
+                                  )
+                                else
+                                  for (final order in visible)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 10,
+                                      ),
+                                      child: OrderCard(
+                                        order: order,
+                                        title: order.customerName,
+                                        onTap: () => _openOrder(context, order),
+                                      ),
+                                    ),
+                              ],
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
       ),
     );
   }
@@ -355,32 +372,48 @@ class _RestaurantMetric extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: color, size: 20),
+              child: Icon(icon, color: color, size: 18),
             ),
-            const SizedBox(height: 10),
-            Text(
-              '$value',
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: EmeraldColors.textPrimary,
-                height: 1,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              maxLines: 2,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: EmeraldColors.textSecondary,
+            const SizedBox(height: 8),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$value',
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: EmeraldColors.textPrimary,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 130),
+                      child: Text(
+                        label,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: EmeraldColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -443,10 +476,20 @@ class _RestaurantReviewNotice extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13),
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: 4),
-                Text(message, style: const TextStyle(color: EmeraldColors.textSecondary, fontSize: 12)),
+                Text(
+                  message,
+                  style: const TextStyle(
+                    color: EmeraldColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ),
@@ -491,7 +534,11 @@ class _Header extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 26),
+            child: const Icon(
+              Icons.storefront_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(

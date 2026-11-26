@@ -687,32 +687,48 @@ class _CourierMetric extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: color, size: 20),
+              child: Icon(icon, color: color, size: 18),
             ),
-            const SizedBox(height: 10),
-            Text(
-              '$value',
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: EmeraldColors.textPrimary,
-                height: 1,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              maxLines: 2,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: EmeraldColors.textSecondary,
+            const SizedBox(height: 8),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '$value',
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: EmeraldColors.textPrimary,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 130),
+                      child: Text(
+                        label,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: EmeraldColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

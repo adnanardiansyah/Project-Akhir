@@ -473,6 +473,7 @@ class _OrderHeader extends StatelessWidget {
           children: [
             RestaurantAvatar(
               restaurantId: order.restaurantId,
+              restaurantName: order.restaurantName,
               size: 52,
               heroEnabled: false,
             ),

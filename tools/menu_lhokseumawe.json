@@ -1,0 +1,185 @@
+{
+  "cleanupRestaurantIds": [
+    "mie-bangladesh",
+    "hokben-suzuya-lhokseumawe",
+    "wong-solo-lhokseumawe"
+  ],
+  "restaurants": [
+    {
+      "id": "resto1",
+      "updateRestaurant": false,
+      "name": "Mie Bangladesh",
+      "address": "Jl. Perdagangan No. 13, Pusong Baru, Banda Sakti, Kota Lhokseumawe, Aceh",
+      "location": {
+        "latitude": 5.172317,
+        "longitude": 97.151159
+      },
+      "menuItems": [
+        {
+          "id": "mie-bangladesh",
+          "name": "Mie Bangladesh",
+          "price": 26000
+        },
+        {
+          "id": "mie-rebus-bangladesh",
+          "name": "Mie Rebus Bangladesh",
+          "price": 26000
+        },
+        {
+          "id": "mie-goreng-basah-daging",
+          "name": "Mie Goreng Basah Daging",
+          "price": 26000
+        },
+        {
+          "id": "kari-kambing",
+          "name": "Kari Kambing",
+          "price": 27000
+        },
+        {
+          "id": "roti-cane",
+          "name": "Roti Cane",
+          "price": 5000
+        },
+        {
+          "id": "martabak-telur",
+          "name": "Martabak Telur",
+          "price": 12000
+        }
+      ]
+    },
+    {
+      "id": "resto2",
+      "updateRestaurant": false,
+      "name": "HokBen - Suzuya Mall Lhokseumawe",
+      "address": "Suzuya Mall, Lantai Dasar, Jl. Samudera Baru No. 1, Simpang Empat, Banda Sakti, Lhokseumawe, Aceh 24355",
+      "location": {
+        "latitude": 5.178340088987248,
+        "longitude": 97.14837938148263
+      },
+      "menuItems": [
+        {
+          "id": "chicken-teriyaki",
+          "name": "Chicken Teriyaki",
+          "price": 31819
+        },
+        {
+          "id": "beef-teriyaki",
+          "name": "Beef Teriyaki",
+          "price": 43637
+        },
+        {
+          "id": "chicken-yakiniku",
+          "name": "Chicken Yakiniku",
+          "price": 31819
+        },
+        {
+          "id": "beef-yakiniku",
+          "name": "Beef Yakiniku",
+          "price": 43637
+        },
+        {
+          "id": "simple-set-chicken-teriyaki-1",
+          "name": "Simple Set Chicken Teriyaki 1",
+          "price": 39546
+        },
+        {
+          "id": "hokkaido-miso-ramen-reguler",
+          "name": "Hokkaido Miso Ramen Reguler",
+          "price": 33637
+        },
+        {
+          "id": "tori-ball",
+          "name": "Tori Ball",
+          "price": 32728
+        },
+        {
+          "id": "ebi-furai",
+          "name": "Ebi Furai",
+          "price": 37728
+        },
+        {
+          "id": "teh-kotak-sosro",
+          "name": "Teh Kotak Sosro",
+          "price": 9091
+        },
+        {
+          "id": "fresh-orange-juice",
+          "name": "Fresh Orange Juice",
+          "price": 17273
+        }
+      ]
+    },
+    {
+      "id": "resto3",
+      "updateRestaurant": false,
+      "name": "Ayam Penyet Wong Solo Lhokseumawe",
+      "address": "Jl. Darussalam, Lancang Garam, Banda Sakti, Kota Lhokseumawe, Aceh",
+      "location": {
+        "latitude": 5.1814878,
+        "longitude": 97.1450374
+      },
+      "menuItems": [
+        {
+          "id": "naskot-ayam-penyet",
+          "name": "Naskot Ayam Penyet",
+          "price": 47300
+        },
+        {
+          "id": "paket-ayam-bakar",
+          "name": "Paket Ayam Bakar",
+          "price": 47300
+        },
+        {
+          "id": "naskot-lombok-ijo",
+          "name": "Naskot Lombok Ijo",
+          "price": 47300
+        },
+        {
+          "id": "naskot-nila-bakar",
+          "name": "Naskot Nila Bakar",
+          "price": 55000
+        },
+        {
+          "id": "nasi-goreng-ayam",
+          "name": "Nasi Goreng Ayam",
+          "price": 46200
+        },
+        {
+          "id": "mie-goreng-biasa",
+          "name": "Mie Goreng Biasa",
+          "price": 46200
+        },
+        {
+          "id": "es-jeruk-nipis",
+          "name": "Es Jeruk Nipis",
+          "price": 26400
+        },
+        {
+          "id": "es-kopi-susu",
+          "name": "Es Kopi Susu",
+          "price": 20900
+        },
+        {
+          "id": "cah-brokoli",
+          "name": "Cah Brokoli",
+          "price": 41800
+        },
+        {
+          "id": "tumis-kangkung",
+          "name": "Tumis Kangkung",
+          "price": 25300
+        },
+        {
+          "id": "balado-cumi",
+          "name": "Balado Cumi",
+          "price": 53900
+        },
+        {
+          "id": "nasi-putih",
+          "name": "Nasi Putih",
+          "price": 15400
+        }
+      ]
+    }
+  ]
+}

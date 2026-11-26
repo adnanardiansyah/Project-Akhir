@@ -46,3 +46,8 @@ app.*.map.json
 
 # Rahasia lokal (API key OpenRouteService), jangan di-commit
 /env.json
+/tools/node_modules/
+/tools/serviceAccount.json
+/tools/*serviceAccount*.json
+/tools/*adminsdk*.json
+/tools/menu_backup_*.json
